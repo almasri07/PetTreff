@@ -1,0 +1,31 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Roboto', sans-serif;
+}
+
+html, body, #root {
+  width: 100%;
+  height: 100%;
+}
+
+/* Globale Media‑Query: stapelt die drei Panels ab 768 px Breite */
+@media (max-width: 768px) {
+  .homeContainer {
+    flex-direction: column !important;
+    padding: 16px 0 0 !important;
+  }
+ .sidebar, .rightbar {
+  display: none; /* versteckt Sidebar und Rightbar auf kleinen Bildschirmen */
+   
+}
+
+
+
+}
+
+/* Custom Scrollbar (optional) */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-thumb { background: #a2a6ad; border-radius: 10px; }
+::-webkit-scrollbar-track { background: #c9ccd4; }
