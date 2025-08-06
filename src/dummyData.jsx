@@ -3,51 +3,109 @@ export const Users = [
     id: 1,
     profilePicture: "assets/001.jpg",
     username: "Lena Fischer",
+    petType: "Dog",
   },
   {
     id: 2,
     profilePicture: "assets/002.jpg",
     username: "Tobias Meier",
+    petType: "Cat",
   },
   {
     id: 3,
     profilePicture: "assets/003.jpg",
     username: "Emily Wagner",
+    petType: "Bird",
   },
   {
     id: 4,
     profilePicture: "assets/001.jpg",
     username: "Jonas Becker",
+    petType: "Dog",
   },
   {
     id: 5,
     profilePicture: "assets/002.jpg",
     username: "Mila Schulz",
+    petType: "Cat",
   },
   {
     id: 6,
     profilePicture: "assets/003.jpg",
     username: "Noah Hoffmann",
+    petType: "Dog",
   },
   {
     id: 7,
     profilePicture: "assets/003.jpg",
     username: "Sophie Braun",
+    petType: "Dog",
   },
   {
     id: 8,
     profilePicture: "assets/002.jpg",
     username: "Leon Schäfer",
+    petType: "Cat",
   },
   {
     id: 9,
     profilePicture: "assets/001.jpg",
     username: "Lara Zimmermann",
+    petType: "Dog",
   },
   {
     id: 10,
     profilePicture: "assets/001.jpg",
     username: "Finn Kaiser",
+    petType: "Dog",
+  },
+  {
+    id: 11,
+    profilePicture: "assets/002.jpg",
+    username: "Emma Richter",
+    petType: "Dog",
+  },
+  {
+    id: 12,
+    profilePicture: "assets/003.jpg",
+    username: "Maximilian Wolf",
+    petType: "Cat",
+  },
+  {
+    id: 13,
+    profilePicture: "assets/001.jpg",
+    username: "Hannah Weber",
+    petType: "Dog",
+  },
+  {
+    id: 14,
+    profilePicture: "assets/002.jpg",
+    username: "Paul Zimmer",
+    petType: "Cat",
+  },
+  {
+    id: 15,
+    profilePicture: "assets/003.jpg",
+    username: "Laura Klein",
+    petType: "Bird",
+  },
+  {
+    id: 16,
+    profilePicture: "assets/001.jpg",
+    username: "Tim Hoffmann",
+    petType: "Dog",
+  },
+  {
+    id: 17,
+    profilePicture: "assets/002.jpg",
+    username: "Nina Schwarz",
+    petType: "Cat",
+  },
+  {
+    id: 18,
+    profilePicture: "assets/003.jpg",
+    username: "Jonas Richter",
+    petType: "Dog",
   },
 ];
 
@@ -135,5 +193,47 @@ export const Posts = [
     userId: 10,
     like: 104,
     comment: 12,
+  },
+];
+export const matchRequests = [
+  {
+    id: 1,
+    userId: 1, // Lena Fischer (Dog)
+    petType: "Dog",
+    location: "Central Park",
+    description: "Looking for a pet meet-up!",
+    createdAt: "2025-08-06T19:08:02",
+  },
+  {
+    id: 2,
+    userId: 4, // Jonas Becker (Dog)
+    petType: "Dog",
+    location: "Central Park",
+    description: "My dog needs new friends.",
+    createdAt: "2025-08-06T18:55:00",
+  },
+  {
+    id: 3,
+    userId: 6, // Noah Hoffmann (Dog)
+    petType: "Dog",
+    location: "Dog Park",
+    description: "Looking for a walk buddy.",
+    createdAt: "2025-08-06T18:30:00",
+  },
+  {
+    id: 4,
+    userId: 2, // Tobias Meier (Cat)
+    petType: "Cat",
+    location: "Main Square",
+    description: "Cat lovers meetup this weekend!",
+    createdAt: "2025-08-06T17:45:00",
+  },
+  {
+    id: 5,
+    userId: 15, // Laura Klein (Bird)
+    petType: "Bird",
+    location: "Green Garden",
+    description: "Bird watching meetup 🐦",
+    createdAt: "2025-08-06T17:00:00",
   },
 ];

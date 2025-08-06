@@ -131,5 +131,61 @@
   color: #2C3E40;
 }
 
+.matchPopupContent {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.matchRequestItem {
+  display: flex;
+  align-items: center;
+  background: #f9f9f9;
+  padding: 10px;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+
+.matchProfileImg {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-right: 10px;
+}
+
+.matchInfo {
+  flex: 1;
+}
+
+.matchName {
+  font-weight: 600;
+  display: block;
+}
+
+.matchMessage {
+  font-size: 0.9rem;
+  color: #777;
+}
+
+.matchActions button {
+  margin-left: 5px;
+  padding: 5px 8px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.acceptBtn {
+  background-color: #2C3E40;
+  color: white;
+}
+
+.declineBtn {
+  background-color:#F1A438;;
+  color: white;
+}
+
+
 
 

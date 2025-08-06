@@ -1,5 +1,11 @@
 import "./topbar.css";
-import { Search, Person, Chat, Notifications } from "@mui/icons-material";
+import {
+  Search,
+  Person,
+  Beenhere,
+  Chat,
+  Notifications,
+} from "@mui/icons-material";
 import { Link } from "react-router-dom";
 import { useState, useRef, useEffect } from "react";
 
@@ -57,17 +63,24 @@ export default function Topbar() {
           </div>
           <div
             className="topbarIconItem"
+            onClick={() => handleIconClick("match")}
+          >
+            <Beenhere />
+            <span className="topbarIconBadge">2</span>
+          </div>
+          <div
+            className="topbarIconItem"
             onClick={() => handleIconClick("chat")}
           >
             <Chat />
-            <span className="topbarIconBadge">2</span>
+            <span className="topbarIconBadge">3</span>
           </div>
           <div
             className="topbarIconItem"
             onClick={() => handleIconClick("notify")}
           >
             <Notifications />
-            <span className="topbarIconBadge">3</span>
+            <span className="topbarIconBadge">4</span>
           </div>
         </div>
 
@@ -75,22 +88,161 @@ export default function Topbar() {
         {openPopup && (
           <div className="topbarDropdown" ref={dropdownRef}>
             {openPopup === "friend" && (
-              <>
-                <p>Ali sent you a friend request</p>
-                <p>Maria sent you a friend request</p>
-              </>
+              <div className="matchPopupContent">
+                <div className="matchRequestItem">
+                  <img
+                    src="/assets/ali.jpg"
+                    alt="Ali"
+                    className="matchProfileImg"
+                  />
+                  <div className="matchInfo">
+                    <span className="matchName">Ali Hamed</span>
+                    <span className="matchMessage">
+                      sent you a friend request
+                    </span>
+                  </div>
+                  <div className="matchActions">
+                    <button className="acceptBtn">Accept</button>
+                    <button className="declineBtn">Decline</button>
+                  </div>
+                </div>
+
+                <div className="matchRequestItem">
+                  <img
+                    src="/assets/maria.jpg"
+                    alt="Maria"
+                    className="matchProfileImg"
+                  />
+                  <div className="matchInfo">
+                    <span className="matchName">Maria Costa</span>
+                    <span className="matchMessage">
+                      sent you a friend request
+                    </span>
+                  </div>
+                  <div className="matchActions">
+                    <button className="acceptBtn">Accept</button>
+                    <button className="declineBtn">Decline</button>
+                  </div>
+                </div>
+              </div>
             )}
+
+            {/*openPopup === "match" && (
+              <>
+                <p>Jahn sent you a match request</p>
+                <p>Lisa sent you a match request</p>
+              </>
+            )*/}
+            {openPopup === "match" && (
+              <div className="matchPopupContent">
+                <div className="matchRequestItem">
+                  <img
+                    src="/assets/jahn.jpg"
+                    alt="Jahn"
+                    className="matchProfileImg"
+                  />
+                  <div className="matchInfo">
+                    <span className="matchName">Jahn Kramer </span>
+                    <span className="matchMessage">
+                      sent you a match request
+                    </span>
+                  </div>
+                  <div className="matchActions">
+                    <button className="acceptBtn">Accept</button>
+                    <button className="declineBtn">Decline</button>
+                  </div>
+                </div>
+
+                <div className="matchRequestItem">
+                  <img
+                    src="/assets/lisa.jpg"
+                    alt="Lisa"
+                    className="matchProfileImg"
+                  />
+                  <div className="matchInfo">
+                    <span className="matchName">Lisa Becker </span>
+                    <span className="matchMessage">
+                      sent you a match request
+                    </span>
+                  </div>
+                  <div className="matchActions">
+                    <button className="acceptBtn">Accept</button>
+                    <button className="declineBtn">Decline</button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {openPopup === "chat" && (
-              <>
-                <p>You have 2 new messages</p>
-                <p>Click to read your inbox</p>
-              </>
+              <div className="matchPopupContent">
+                <div className="matchRequestItem">
+                  <img
+                    src="/assets/ali.jpg"
+                    alt="Ali"
+                    className="matchProfileImg"
+                  />
+                  <div className="matchInfo">
+                    <span className="matchName">Ali</span>
+                    <span className="matchMessage">Hey, how's your pet?</span>
+                  </div>
+                </div>
+
+                <div className="matchRequestItem">
+                  <img
+                    src="/assets/maria.jpg"
+                    alt="Maria"
+                    className="matchProfileImg"
+                  />
+                  <div className="matchInfo">
+                    <span className="matchName">Maria</span>
+                    <span className="matchMessage">
+                      Let's meet up this weekend!
+                    </span>
+                  </div>
+                </div>
+
+                <div className="matchRequestItem">
+                  <img
+                    src="/assets/jahn.jpg"
+                    alt="Jahn"
+                    className="matchProfileImg"
+                  />
+                  <div className="matchInfo">
+                    <span className="matchName">Jahn</span>
+                    <span className="matchMessage">
+                      Did you see the new pet adoption event?
+                    </span>
+                  </div>
+                </div>
+              </div>
             )}
+
             {openPopup === "notify" && (
-              <>
-                <p>Someone liked your post</p>
-                <p>You have 3 new followers</p>
-              </>
+              <div className="matchPopupContent">
+                <div className="matchRequestItem">
+                  <img
+                    src="/assets/user1.jpg"
+                    alt="User1"
+                    className="matchProfileImg"
+                  />
+                  <div className="matchInfo">
+                    <span className="matchName">Emily</span>
+                    <span className="matchMessage">liked your post</span>
+                  </div>
+                </div>
+
+                <div className="matchRequestItem">
+                  <img
+                    src="/assets/user2.jpg"
+                    alt="User2"
+                    className="matchProfileImg"
+                  />
+                  <div className="matchInfo">
+                    <span className="matchName">3 new users</span>
+                    <span className="matchMessage">started following you</span>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
         )}
