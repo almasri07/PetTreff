@@ -1,0 +1,13 @@
+.homeContainer {
+  display: flex;
+  flex-wrap: nowrap;      /* spalten bleiben nebeneinander */
+  width: 100%;
+  min-height: 100vh;
+  background: #f0f2f5;
+  padding: 40px 16px 0;   
+  box-sizing: border-box;
+  overflow-x: auto;       /* horizontaler Scrollbar bei Bedarf */
+  margin: 0;
+}
+
+
