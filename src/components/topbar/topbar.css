@@ -187,5 +187,14 @@
 }
 
 
+.hamburgerMenu {
+  display: none; /* Standardmäßig versteckt */
+  font-size: 20px;
+  color: white;
+  cursor: pointer;
+  margin-left: 5px;
+  padding: 10px;
+  border-radius: 50%;
 
+}
 

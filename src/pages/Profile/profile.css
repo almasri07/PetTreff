@@ -1,0 +1,9 @@
+
+.profileContainer { width: 100%; max-width: 900px; margin: 12px auto; padding: 0 12px; }
+.profileForm, .profileCard { background:whitesmoke; border:2px solid steelblue; border-radius:12px; padding:12px; }
+.profileForm { display:flex; flex-direction:column; gap:12px; margin-bottom:12px; }
+.profileForm label { display:flex; flex-direction:column; gap:6px; }
+.profileForm input, .profileForm textarea { border:1px solid #e5e7eb; border-radius:8px; padding:8px 10px; }
+.profileForm fieldset { border:1px solid #e5e7eb; border-radius:8px; padding:8px 10px; display:flex; gap:12px; flex-wrap:wrap; }
+.profileForm legend { padding: 0 4px; color:#374151; }
+.btn { align-self:flex-start; background:#111827; color:#fff; border:0; padding:8px 12px; border-radius:8px; cursor:pointer; }

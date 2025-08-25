@@ -89,15 +89,18 @@ export default function Sidebar() {
             className={`sidebarListItem${
               window.location.pathname === "/match" ? " active" : ""
             }`}
-          >
+          > 
             <Link to="/match" className="sidebarLink">
               <Beenhere className="sidebarIcon" />
               <span className="sidebarListItemText">Match</span>
             </Link>
           </li>
           <li className="sidebarListItem">
+            <Link to="/Profile" className="sidebarLink">
+              <RssFeed className="sidebarIcon" />
             <AccountBox className="sidebarIcon" />
             <span className="sidebarListItemText">Profile</span>
+            </Link>
           </li>
         </ul>
         {showChatBox && <ChatPopup onClose={() => setShowChatBox(false)} />}

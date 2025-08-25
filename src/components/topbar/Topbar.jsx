@@ -5,21 +5,30 @@ import {
   Beenhere,
   Chat,
   Notifications,
+  Dialpad,
+  NoEncryption,
 } from "@mui/icons-material";
 import { Link } from "react-router-dom";
 import { useState, useRef, useEffect } from "react";
 
-export default function Topbar() {
+export default function Topbar({ onHamburgerClic  }) {
+  console.log(onHamburgerClic);
   const [openPopup, setOpenPopup] = useState(null); // "friend" | "chat" | "notify" | null
   const dropdownRef = useRef(null);
 
   const handleIconClick = (type) => {
-    setOpenPopup((prev) => (prev === type ? null : type));
+    console.log("Clicked on: ", type);
+    setOpenPopup((prev)  => 
+      
+      (prev === type ? null : type));
+ 
   };
 
   // schließe das Dropdown, wenn außerhalb geklickt wird
   useEffect(() => {
     function handleClickOutside(event) {
+      console.log("dropdownRef ist :  " ,dropdownRef);
+      console.log("event ist : " , event);
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setOpenPopup(null);
       }
@@ -32,6 +41,11 @@ export default function Topbar() {
 
   return (
     <div className="topbarContainer">
+
+       <div className="hamburgerMenu" onClick={onHamburgerClic}  >
+        <span className="logoham">☰</span>
+      </div>
+
       <div className="topbarLeft">
         <span className="logo">TierTreff Logo</span>
       </div>
@@ -174,8 +188,11 @@ export default function Topbar() {
             )}
 
             {openPopup === "chat" && (
+              
+            
               <div className="matchPopupContent">
                 <div className="matchRequestItem">
+                   {alert(openPopup)} 
                   <img
                     src="/assets/ali.jpg"
                     alt="Ali"
@@ -218,8 +235,10 @@ export default function Topbar() {
             )}
 
             {openPopup === "notify" && (
+               
               <div className="matchPopupContent">
                 <div className="matchRequestItem">
+                      {alert(openPopup)} 
                   <img
                     src="/assets/user1.jpg"
                     alt="User1"
