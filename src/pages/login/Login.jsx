@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import "./Login.css";
+import { api } from "../../api/api";
+import { AuthApi } from "../../api/api";
 
 export default function Login() {
   const [username, setUsername] = useState("");
@@ -8,24 +10,24 @@ export default function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setErrorMessage("");
 
     try {
-      const response = await fetch("http://localhost:8080/req/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: new URLSearchParams({ username, password }),
-      });
+      const body = new URLSearchParams({ username, password }).toString();
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        setErrorMessage(errorText || "Login failed");
+      await AuthApi.login({ username, password });
+
+      // session cookie is now stored by the browser
+      window.location.href = "/home";
+    } catch (err) {
+      if (err.response?.status === 401) {
+        setErrorMessage("Invalid username or password.");
       } else {
-        window.location.href = "/dashboard";
+        const msg =
+          err.response?.data ||
+          `Login failed (HTTP ${err.response?.status || "?"})`;
+        setErrorMessage(msg);
       }
-    } catch (error) {
-      setErrorMessage("Server error. Please try again later.");
     }
   };
 
@@ -41,12 +43,13 @@ export default function Login() {
         )}
 
         <div className="inputbox">
-          <ion-icon name="email-outline"></ion-icon>
+          <ion-icon name="person-outline"></ion-icon>
           <input
             name="username"
             id="username"
             type="text"
             required
+            autoComplete="username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
           />
@@ -57,9 +60,10 @@ export default function Login() {
           <ion-icon name="lock-closed-outline"></ion-icon>
           <input
             name="password"
-            type="password"
             id="password"
+            type="password"
             required
+            autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />

@@ -1,68 +1,71 @@
+// src/components/sidebar/Sidebar.jsx
 import "./sidebar.css";
-import { RssFeed, Forum, Beenhere, AccountBox } from "@mui/icons-material";
-import { Users } from "../../dummyData";
-import { Link } from "react-router-dom";
-import { useState, useRef, useEffect } from "react";
+import {
+  RssFeed,
+  Forum,
+  Beenhere,
+  AccountBox,
+  ExitToApp,
+} from "@mui/icons-material";
+import { Link, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
 import ChatPopup from "../chatpopup/ChatPopup";
-import FriendRequestPopup from "../friendRequestPopup/FriendRequestPopup";
 
 export default function Sidebar() {
-  const loggedInUser = {
-    id: 999,
-    petType: "Dog",
-  };
+  const location = useLocation();
 
-  // bring alle Users mit dem gleichen petType wie der eingeloggte User
-  const samePetUsers = Users.filter(
-    (user) =>
-      user.id !== loggedInUser.id && user.petType === loggedInUser.petType
-  );
-
-  // mische die Liste der Users
-  const shuffledUsers = samePetUsers.sort(() => 0.5 - Math.random());
-
-  // nimm die ersten 5 Users als Vorschläge
-  const suggested = shuffledUsers.slice(0, 5);
-
+  const [currentUser, setCurrentUser] = useState(null);
+  const [friends, setFriends] = useState([]);
   const [showChatBox, setShowChatBox] = useState(false);
-  const handleChatClick = () => {
-    setShowChatBox((prev) => !prev);
-  };
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState(null);
 
-  const [selectedUser, setSelectedUser] = useState(null);
-
+  // Load logged-in user + friends from backend
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (popupRef.current && !popupRef.current.contains(event.target)) {
-        setSelectedUser(null); // close popup
+    let isMounted = true;
+
+    const load = async () => {
+      try {
+        // 1) Who am I?
+        const meRes = await fetch(`${import.meta.env.VITE_API_BASE}/auth/me`, {
+          credentials: "include",
+        });
+        if (!meRes.ok) {
+          if (isMounted) setErr("Not authenticated");
+          return;
+        }
+        const me = await meRes.json(); // expect { id, username, ... }
+        if (!isMounted) return;
+        setCurrentUser(me);
+
+        // 2) Friends of this user
+        const frRes = await fetch(
+          `${import.meta.env.VITE_API_BASE}/api/users/${me.id}/friends`,
+          { credentials: "include" }
+        );
+        if (!frRes.ok) throw new Error("Failed to load friends");
+        const fr = await frRes.json(); // expect [{ id, username, profilePicture }, ...]
+        if (!isMounted) return;
+        setFriends(Array.isArray(fr) ? fr : []);
+      } catch (e) {
+        if (isMounted) setErr(e.message || "Something went wrong");
+      } finally {
+        if (isMounted) setLoading(false);
       }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    load();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  const handleSendRequest = (userId) => {
-    alert(`Friend request sent to user with ID: ${userId}`);
-    setSelectedUser(null);
-  };
-
-  const popupRef = useRef(null);
-
-  const [popupPosition, setPopupPosition] = useState({ top: 0, left: 0 });
-  const nameRefs = useRef({});
-
-  const handleNameClick = (user) => {
-    const element = nameRefs.current[user.id];
-    if (element) {
-      const rect = element.getBoundingClientRect();
-      setPopupPosition({
-        top: rect.top + window.scrollY + -55,
-        left: rect.left + window.scrollX + 0,
-      });
-    }
-    setSelectedUser(user);
-  };
+  if (loading) return null; // or a small skeleton/loader
+  if (err) {
+    // You could also redirect to /login here if unauthenticated
+    return <div className="sidebar">Error: {err}</div>;
+  }
+  if (!currentUser) return null;
 
   return (
     <div className="sidebar">
@@ -70,74 +73,88 @@ export default function Sidebar() {
         <ul className="sidebarList">
           <li
             className={`sidebarListItem${
-              window.location.pathname === "/" ? " active" : ""
+              location.pathname === "/home" ? " active" : ""
             }`}
           >
-            <Link to="/" className="sidebarLink">
+            <Link to="/home" className="sidebarLink">
               <RssFeed className="sidebarIcon" />
               <span className="sidebarListItemText">Home</span>
             </Link>
           </li>
+
           <li
             className={`sidebarListItem${showChatBox ? " active" : ""}`}
-            onClick={handleChatClick}
+            onClick={() => setShowChatBox(true)}
           >
             <Forum className="sidebarIcon" />
             <span className="sidebarListItemText">Chat</span>
           </li>
+
           <li
             className={`sidebarListItem${
-              window.location.pathname === "/match" ? " active" : ""
+              location.pathname === "/match" ? " active" : ""
             }`}
-          > 
+          >
             <Link to="/match" className="sidebarLink">
               <Beenhere className="sidebarIcon" />
               <span className="sidebarListItemText">Match</span>
             </Link>
           </li>
-          <li className="sidebarListItem">
-            <Link to="/Profile" className="sidebarLink">
-              <RssFeed className="sidebarIcon" />
-            <AccountBox className="sidebarIcon" />
-            <span className="sidebarListItemText">Profile</span>
+
+          <li
+            className={`sidebarListItem${
+              location.pathname === "/profile" ? " active" : ""
+            }`}
+          >
+            <Link to="/profile" className="sidebarLink">
+              <AccountBox className="sidebarIcon" />
+              <span className="sidebarListItemText">Profile</span>
             </Link>
           </li>
-        </ul>
-        {showChatBox && <ChatPopup onClose={() => setShowChatBox(false)} />}
-        <hr className="sidebarHr" />
-        <h6 className="rightbarTitle">Suggested Friends</h6>
-        <ul className="sidebarFriendList">
-          {suggested.map((u) => (
-            <li className="sidebarFriend" key={u.id}>
-              <img src={u.profilePicture} alt="" className="sidebarFriendImg" />
-              <span
-                className="sidebarFriendName"
-                style={{ cursor: "pointer" }}
-                onClick={() => handleNameClick(u)}
-                ref={(el) => (nameRefs.current[u.id] = el)}
-              >
-                {u.username}
-              </span>
-            </li>
-          ))}
-        </ul>
 
-        {selectedUser && (
-          <div
-            ref={popupRef}
-            style={{
-              position: "absolute",
-              top: popupPosition.top,
-              left: popupPosition.left,
-              zIndex: 9999,
+          <li
+            className="sidebarListItem"
+            onClick={async () => {
+              try {
+                await fetch(`${import.meta.env.VITE_API_BASE}/auth/logout`, {
+                  method: "POST",
+                  credentials: "include",
+                });
+              } finally {
+                window.location.href = "/login";
+              }
             }}
           >
-            <FriendRequestPopup
-              user={selectedUser}
-              onClose={() => setSelectedUser(null)}
-              onSend={handleSendRequest}
-            />
-          </div>
+            <ExitToApp className="sidebarIcon" />
+            <span className="sidebarListItemText">Logout</span>
+          </li>
+        </ul>
+
+        <hr className="sidebarHr" />
+        <h6 className="rightbarTitle">Your Friends</h6>
+        <ul className="sidebarFriendList">
+          {friends.length === 0 ? (
+            <li>No friends yet.</li>
+          ) : (
+            friends.map((f) => (
+              <li className="sidebarFriend" key={f.id}>
+                <img
+                  src={f.profilePicture}
+                  alt={f.username}
+                  className="sidebarFriendImg"
+                />
+                <span className="sidebarFriendName">{f.username}</span>
+              </li>
+            ))
+          )}
+        </ul>
+
+        {showChatBox && (
+          <ChatPopup
+            friends={friends}
+            currentUser={{ id: currentUser.id, username: currentUser.username }}
+            onClose={() => setShowChatBox(false)}
+          />
         )}
       </div>
     </div>

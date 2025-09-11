@@ -4,24 +4,44 @@ export const Users = [
     profilePicture: "assets/001.jpg",
     username: "Lena Fischer",
     petType: "Dog",
+    Friends: [
+      { id: 2, username: "Tobias Meier", profilePicture: "assets/002.jpg" },
+      { id: 3, username: "Emily Wagner", profilePicture: "assets/003.jpg" },
+      { id: 4, username: "Jonas Becker", profilePicture: "assets/001.jpg" },
+    ],
   },
   {
     id: 2,
     profilePicture: "assets/002.jpg",
     username: "Tobias Meier",
     petType: "Cat",
+    Friends: [
+      { id: 1, username: "Lena Fischer", profilePicture: "assets/001.jpg" },
+      { id: 3, username: "Emily Wagner", profilePicture: "assets/003.jpg" },
+      { id: 4, username: "Jonas Becker", profilePicture: "assets/001.jpg" },
+    ],
   },
   {
     id: 3,
     profilePicture: "assets/003.jpg",
     username: "Emily Wagner",
     petType: "Bird",
+    Friends: [
+      { id: 1, username: "Lena Fischer", profilePicture: "assets/001.jpg" },
+      { id: 2, username: "Tobias Meier", profilePicture: "assets/002.jpg" },
+      { id: 4, username: "Jonas Becker", profilePicture: "assets/001.jpg" },
+    ],
   },
   {
     id: 4,
     profilePicture: "assets/001.jpg",
     username: "Jonas Becker",
     petType: "Dog",
+    Friends: [
+      { id: 1, username: "Lena Fischer", profilePicture: "assets/001.jpg" },
+      { id: 2, username: "Tobias Meier", profilePicture: "assets/002.jpg" },
+      { id: 3, username: "Emily Wagner", profilePicture: "assets/003.jpg" },
+    ],
   },
   {
     id: 5,

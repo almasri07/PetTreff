@@ -11,24 +11,21 @@ import {
 import { Link } from "react-router-dom";
 import { useState, useRef, useEffect } from "react";
 
-export default function Topbar({ onHamburgerClic  }) {
+export default function Topbar({ onHamburgerClic }) {
   console.log(onHamburgerClic);
   const [openPopup, setOpenPopup] = useState(null); // "friend" | "chat" | "notify" | null
   const dropdownRef = useRef(null);
 
   const handleIconClick = (type) => {
     console.log("Clicked on: ", type);
-    setOpenPopup((prev)  => 
-      
-      (prev === type ? null : type));
- 
+    setOpenPopup((prev) => (prev === type ? null : type));
   };
 
   // schließe das Dropdown, wenn außerhalb geklickt wird
   useEffect(() => {
     function handleClickOutside(event) {
-      console.log("dropdownRef ist :  " ,dropdownRef);
-      console.log("event ist : " , event);
+      console.log("dropdownRef ist :  ", dropdownRef);
+      console.log("event ist : ", event);
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setOpenPopup(null);
       }
@@ -41,8 +38,7 @@ export default function Topbar({ onHamburgerClic  }) {
 
   return (
     <div className="topbarContainer">
-
-       <div className="hamburgerMenu" onClick={onHamburgerClic}  >
+      <div className="hamburgerMenu" onClick={onHamburgerClic}>
         <span className="logoham">☰</span>
       </div>
 
@@ -62,7 +58,7 @@ export default function Topbar({ onHamburgerClic  }) {
 
       <div className="topbarRight">
         <div className="topbarLinks">
-          <Link to="/" className="sidebarLink">
+          <Link to="/home" className="sidebarLink">
             <span className="topbarLink">Go to Home</span>
           </Link>
         </div>
@@ -188,11 +184,9 @@ export default function Topbar({ onHamburgerClic  }) {
             )}
 
             {openPopup === "chat" && (
-              
-            
               <div className="matchPopupContent">
                 <div className="matchRequestItem">
-                   {alert(openPopup)} 
+                  {alert(openPopup)}
                   <img
                     src="/assets/ali.jpg"
                     alt="Ali"
@@ -235,10 +229,9 @@ export default function Topbar({ onHamburgerClic  }) {
             )}
 
             {openPopup === "notify" && (
-               
               <div className="matchPopupContent">
                 <div className="matchRequestItem">
-                      {alert(openPopup)} 
+                  {alert(openPopup)}
                   <img
                     src="/assets/user1.jpg"
                     alt="User1"

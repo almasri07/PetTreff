@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import "./Login.css";
+import { AuthApi } from "../../api/api"; // ✅ import from your combined api.js
 
 export default function SignupForm() {
   const [data, setData] = useState({
@@ -20,22 +21,20 @@ export default function SignupForm() {
       return;
     }
     try {
-      const res = await fetch("http://localhost:8080/req/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username: data.username,
-          email: data.email,
-          password: data.password,
-        }),
+      const res = await AuthApi.register({
+        username: data.username,
+        email: data.email,
+        password: data.password,
       });
-      if (res.ok) {
+
+      if (res.status === 201) {
         alert("Signup successful!");
-      } else {
-        alert("Signup failed. Try again.");
+        // optional: redirect directly to login or home
+        // window.location.href = "/login";
       }
-    } catch {
-      alert("Server error. Please try again later.");
+    } catch (err) {
+      console.error("Signup error:", err);
+      alert("Signup failed. Please try again.");
     }
   };
 
