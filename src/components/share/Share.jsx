@@ -24,7 +24,6 @@ export default function Share({ addPost }) {
 
   const currentUser = Users[0];
 
-  // 🔄 Gemeinsames Zurücksetzen aller Eingabefelder
   const hideAllInputs = () => {
     setShowPhotoInput(false);
     setShowFeelingInput(false);
