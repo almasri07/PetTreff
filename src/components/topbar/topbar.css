@@ -198,3 +198,20 @@
 
 }
 
+.searchBar { position: relative; }
+.searchDropdown {
+  position: absolute; top: 100%; left: 0; right: 0;
+  background: var(--bg, #b7d8ea); border: 1px solid #333; border-radius: 8px;
+  margin-top: 6px; max-height: 320px; overflow: auto; z-index: 50;
+}
+.searchItem { display: flex; gap: 10px; padding: 10px; text-decoration: none; }
+.searchItem:hover { background: #2a2a2a; }
+.searchAvatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
+.searchName { font-weight: 600; }
+.searchUsername, .muted { opacity: 0.7; font-size: 12px; }
+
+.searchSeeAll {
+  width: 100%; padding: 10px; border: none; background: transparent;
+  cursor: pointer; text-align: left; opacity: .8;
+}
+.searchSeeAll:hover { background:#2a2a2a; opacity: 1; }

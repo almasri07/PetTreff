@@ -5,40 +5,100 @@ import {
   Beenhere,
   Chat,
   Notifications,
-  Dialpad,
-  NoEncryption,
 } from "@mui/icons-material";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useState, useRef, useEffect } from "react";
+import { UsersApi } from "../../api/api"; // <— wichtig
 
-export default function Topbar({ onHamburgerClic }) {
-  console.log(onHamburgerClic);
-  const [openPopup, setOpenPopup] = useState(null); // "friend" | "chat" | "notify" | null
+export default function Topbar({ onHamburgerClick }) {
+  const navigate = useNavigate();
+  const [openPopup, setOpenPopup] = useState(null); // "friend" | "chat" | "notify" | "match" | null
   const dropdownRef = useRef(null);
 
-  const handleIconClick = (type) => {
-    console.log("Clicked on: ", type);
-    setOpenPopup((prev) => (prev === type ? null : type));
+  // === Suche ===
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState([]);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  // NEU: Vollergebnis-Seite öffnen
+  const goToFullResults = () => {
+    const q = query.trim();
+    if (!q) return;
+    setSearchOpen(false);
+    navigate(`/search?query=${encodeURIComponent(q)}`);
   };
 
-  // schließe das Dropdown, wenn außerhalb geklickt wird
+  // Klick außerhalb: alle Popups + Suchdropdown schließen
   useEffect(() => {
-    function handleClickOutside(event) {
-      console.log("dropdownRef ist :  ", dropdownRef);
-      console.log("event ist : ", event);
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+    function handleClickOutside(e) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setOpenPopup(null);
+        setSearchOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const handleIconClick = (type) => {
+    setOpenPopup((prev) => (prev === type ? null : type));
+    setSearchOpen(false); // Suchdropdown zu, wenn anderes Popup auf
+  };
+
+  // Debounced Suche (300ms)
+  useEffect(() => {
+    if (!query?.trim()) {
+      setResults([]);
+      return;
+    }
+    setLoading(true);
+    const t = setTimeout(async () => {
+      try {
+        const { data } = await UsersApi.search(query.trim());
+        setResults(data || []);
+        setSearchOpen(true);
+      } catch (e) {
+        setResults([]);
+      } finally {
+        setLoading(false);
+      }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  // Enter drückt: sofort suchen
+  // const handleSearchKeyDown = async (e) => {
+  //  if (e.key === "Enter") {
+  /*
+      e.preventDefault();
+      if (!query.trim()) return;
+      setLoading(true);
+      try {
+        const { data } = await UsersApi.search(query.trim());
+        setResults(data || []);
+        setSearchOpen(true);
+      } finally {
+        setLoading(false);
+      }
+    } else if (e.key === "Escape") {
+      setSearchOpen(false);
+    }
+  };
+  */
+  // GEÄNDERT: Enter öffnet /search?query=...
+  const handleSearchKeyDown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      goToFullResults();
+    } else if (e.key === "Escape") {
+      setSearchOpen(false);
+    }
+  };
+
   return (
-    <div className="topbarContainer">
-      <div className="hamburgerMenu" onClick={onHamburgerClic}>
+    <div className="topbarContainer" ref={dropdownRef}>
+      <div className="hamburgerMenu" onClick={onHamburgerClick}>
         <span className="logoham">☰</span>
       </div>
 
@@ -50,9 +110,43 @@ export default function Topbar({ onHamburgerClic }) {
         <div className="searchBar">
           <Search className="searchIcon" />
           <input
-            placeholder="Search for friends, posts or match"
+            placeholder="Search for Username"
             className="searchInput"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onFocus={() => results.length && setSearchOpen(true)}
+            onKeyDown={handleSearchKeyDown}
           />
+          {searchOpen && (
+            <div className="searchDropdown">
+              {loading && <div className="searchItem muted">Search…</div>}
+              {/* NEU: Footer-Button */}
+              {!loading && results.length > 0 && (
+                <button className="searchSeeAll" onClick={goToFullResults}>
+                  Show all results ({results.length})
+                </button>
+              )}
+
+              {!loading &&
+                results.map((u) => (
+                  <Link
+                    key={u.id}
+                    to={`/users/${u.id}`} // passe an deine Routen an
+                    className="searchItem"
+                    onClick={() => setSearchOpen(false)}
+                  >
+                    <img
+                      src={u.profilePictureUrl || "/assets/default-avatar.png"}
+                      alt={u.username}
+                      className="searchAvatar"
+                    />
+                    <div className="searchText">
+                      <div className="searchUsername">@{u.username}</div>
+                    </div>
+                  </Link>
+                ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -94,168 +188,10 @@ export default function Topbar({ onHamburgerClic }) {
           </div>
         </div>
 
-        {/* Dropdowns */}
+        {/* Deine bestehenden Popups bleiben wie gehabt … */}
         {openPopup && (
-          <div className="topbarDropdown" ref={dropdownRef}>
-            {openPopup === "friend" && (
-              <div className="matchPopupContent">
-                <div className="matchRequestItem">
-                  <img
-                    src="/assets/ali.jpg"
-                    alt="Ali"
-                    className="matchProfileImg"
-                  />
-                  <div className="matchInfo">
-                    <span className="matchName">Ali Hamed</span>
-                    <span className="matchMessage">
-                      sent you a friend request
-                    </span>
-                  </div>
-                  <div className="matchActions">
-                    <button className="acceptBtn">Accept</button>
-                    <button className="declineBtn">Decline</button>
-                  </div>
-                </div>
-
-                <div className="matchRequestItem">
-                  <img
-                    src="/assets/maria.jpg"
-                    alt="Maria"
-                    className="matchProfileImg"
-                  />
-                  <div className="matchInfo">
-                    <span className="matchName">Maria Costa</span>
-                    <span className="matchMessage">
-                      sent you a friend request
-                    </span>
-                  </div>
-                  <div className="matchActions">
-                    <button className="acceptBtn">Accept</button>
-                    <button className="declineBtn">Decline</button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/*openPopup === "match" && (
-              <>
-                <p>Jahn sent you a match request</p>
-                <p>Lisa sent you a match request</p>
-              </>
-            )*/}
-            {openPopup === "match" && (
-              <div className="matchPopupContent">
-                <div className="matchRequestItem">
-                  <img
-                    src="/assets/jahn.jpg"
-                    alt="Jahn"
-                    className="matchProfileImg"
-                  />
-                  <div className="matchInfo">
-                    <span className="matchName">Jahn Kramer </span>
-                    <span className="matchMessage">
-                      sent you a match request
-                    </span>
-                  </div>
-                  <div className="matchActions">
-                    <button className="acceptBtn">Accept</button>
-                    <button className="declineBtn">Decline</button>
-                  </div>
-                </div>
-
-                <div className="matchRequestItem">
-                  <img
-                    src="/assets/lisa.jpg"
-                    alt="Lisa"
-                    className="matchProfileImg"
-                  />
-                  <div className="matchInfo">
-                    <span className="matchName">Lisa Becker </span>
-                    <span className="matchMessage">
-                      sent you a match request
-                    </span>
-                  </div>
-                  <div className="matchActions">
-                    <button className="acceptBtn">Accept</button>
-                    <button className="declineBtn">Decline</button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {openPopup === "chat" && (
-              <div className="matchPopupContent">
-                <div className="matchRequestItem">
-                  {alert(openPopup)}
-                  <img
-                    src="/assets/ali.jpg"
-                    alt="Ali"
-                    className="matchProfileImg"
-                  />
-                  <div className="matchInfo">
-                    <span className="matchName">Ali</span>
-                    <span className="matchMessage">Hey, how's your pet?</span>
-                  </div>
-                </div>
-
-                <div className="matchRequestItem">
-                  <img
-                    src="/assets/maria.jpg"
-                    alt="Maria"
-                    className="matchProfileImg"
-                  />
-                  <div className="matchInfo">
-                    <span className="matchName">Maria</span>
-                    <span className="matchMessage">
-                      Let's meet up this weekend!
-                    </span>
-                  </div>
-                </div>
-
-                <div className="matchRequestItem">
-                  <img
-                    src="/assets/jahn.jpg"
-                    alt="Jahn"
-                    className="matchProfileImg"
-                  />
-                  <div className="matchInfo">
-                    <span className="matchName">Jahn</span>
-                    <span className="matchMessage">
-                      Did you see the new pet adoption event?
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {openPopup === "notify" && (
-              <div className="matchPopupContent">
-                <div className="matchRequestItem">
-                  {alert(openPopup)}
-                  <img
-                    src="/assets/user1.jpg"
-                    alt="User1"
-                    className="matchProfileImg"
-                  />
-                  <div className="matchInfo">
-                    <span className="matchName">Emily</span>
-                    <span className="matchMessage">liked your post</span>
-                  </div>
-                </div>
-
-                <div className="matchRequestItem">
-                  <img
-                    src="/assets/user2.jpg"
-                    alt="User2"
-                    className="matchProfileImg"
-                  />
-                  <div className="matchInfo">
-                    <span className="matchName">3 new users</span>
-                    <span className="matchMessage">started following you</span>
-                  </div>
-                </div>
-              </div>
-            )}
+          <div className="topbarDropdown">
+            {/* friend / match / chat / notify Inhalte */}
           </div>
         )}
 

@@ -10,6 +10,7 @@ import {
 import { Link, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import ChatPopup from "../chatpopup/ChatPopup";
+import { AuthApi, UsersApi } from "../../api/api";
 
 export default function Sidebar() {
   const location = useLocation();

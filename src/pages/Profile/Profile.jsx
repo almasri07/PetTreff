@@ -1,46 +1,101 @@
-
-
-import React, { useState } from "react";
+import { useEffect, useState } from "react";
 import Topbar from "../../components/topbar/Topbar";
-import Sidebar from "../../components/sidebar/sidebar";
+import Sidebar from "../../components/sidebar/Sidebar";
+import { ProfileApi, AuthApi } from "../../api/api";
 import "./profile.css";
 
+/** Local enum mappers (UI <-> backend enums) */
+const toPetEnum = (v) =>
+  ({ Dog: "DOG", Cat: "CAT", Bird: "BIRD", Other: "OTHER" }[v] || "OTHER");
+
+const fromPetEnum = (e) =>
+  ({ DOG: "Dog", CAT: "Cat", BIRD: "Bird", OTHER: "Other" }[e] || "Other");
+
+const toLookingEnum = (v) =>
+  ({
+    Playdates: "PLAYDATES",
+    Training: "TRAINING",
+    Sitting: "SITTING",
+    Meetups: "MEETUPS",
+  }[v] || "PLAYDATES");
+
+const fromLookingEnum = (e) =>
+  ({
+    PLAYDATES: "Playdates",
+    TRAINING: "Training",
+    SITTING: "Sitting",
+    MEETUPS: "Meetups",
+  }[e] || "Playdates");
+
 export default function Profile() {
-
-
-
   const [form, setForm] = useState({
-    username: "john_doe",
-    bio: "Lover of all things furry!",
-    location: "New York, NY",
-    petType: "Dog",         // Radio
-    lookingFor: "Playdates",// Radio
-    topics: "",             // Text (z.B. "Walking, Health")
-    days: "",               // Text (z.B. "Mo, Mi, Fr")
-    allowMessages: "yes",   // Radio
+    username: "", // shown in heading
+    bio: "",
+    location: "",
+    petTypeUi: "Dog", // UI values
+    lookingForUi: "Playdates",
+    topics: "",
+    days: "",
+    allowMessagesUi: "yes", // "yes" | "no"
   });
 
- 
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      try {
+        console.log("Loading...");
+        // Run both requests in parallel
+        const { data: user } = await AuthApi.me();
+        const { data: profile } = await ProfileApi.getMe();
+        console.log(":::::::::::::::::::");
+        console.log("USERNAME:" + user.username);
+        console.log(profile.bio);
+
+        setForm((f) => ({
+          ...f,
+          username: user?.username ?? "unknown",
+          bio: profile?.bio ?? "",
+          location: profile?.location ?? "",
+          petTypeUi: fromPetEnum(profile?.petType),
+          lookingForUi: fromLookingEnum(profile?.lookingFor),
+          topics: profile?.topics ?? "",
+          days: profile?.days ?? "",
+          allowMessagesUi: profile?.allowMessages ? "yes" : "no",
+        }));
+      } catch (err) {
+        console.error("Failed to load profile:", err);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
 
   const onChange = (e) => {
-  //  const newform = {...form};
-  //   newform[e.target.name] = e.target.value;
-  //   setForm(newform);
-
-
-
-
     const { name, value } = e.target;
-    {alert(value)}
-    console.log("hier ist : " , e.target);
-    setForm( (f)=> ({ ...f, [name]: value }));
-
-
+    setForm((f) => ({ ...f, [name]: value }));
   };
 
-  const onSubmit = (e) => {
+  const onSubmit = async (e) => {
     e.preventDefault();
-    alert("Gespeichert (Frontend-only).");
+    const dto = {
+      bio: form.bio,
+      location: form.location,
+      petType: toPetEnum(form.petTypeUi),
+      lookingFor: toLookingEnum(form.lookingForUi),
+      topics: form.topics,
+      days: form.days,
+      allowMessages: form.allowMessagesUi === "yes",
+    };
+    try {
+      console.log("Saving...", dto);
+      await ProfileApi.updateMe(dto); // <-- PUT /api/profile/me
+      alert("Saved.");
+    } catch (err) {
+      console.error("Save failed:", err);
+      alert("Save failed.");
+    }
   };
 
   return (
@@ -50,40 +105,48 @@ export default function Profile() {
         <Sidebar />
 
         <div className="profileContainer">
-          <h1>{form.username}'s Profile</h1>
+          <h1>Profile of {form.username}</h1>
 
           <form className="profileForm" onSubmit={onSubmit}>
             <label>
-              Bio
+              About me
               <textarea name="bio" value={form.bio} onChange={onChange} />
             </label>
 
             <label>
               Location
-              <input name="location" value={form.location} onChange={onChange} />
+              <input
+                name="location"
+                value={form.location}
+                onChange={onChange}
+              />
             </label>
 
             <fieldset>
-              <legend>Pet Type</legend>
-              {["Dog","Cat","Bird","Other"].map(v => (
+              <legend>Pet type</legend>
+              {["Dog", "Cat", "Bird", "Other"].map((v) => (
                 <label key={v}>
-                  <input type="radio" name="petType" value={v} checked={form.petType === v} onChange={onChange}
+                  <input
+                    type="radio"
+                    name="petTypeUi"
+                    value={v}
+                    checked={form.petTypeUi === v}
+                    onChange={onChange}
                   />
-                {/* {alert("Hello! I am an alert box!" , {v})} */}
                   {v}
                 </label>
               ))}
             </fieldset>
 
             <fieldset>
-              <legend>Ich suche</legend>
-              {["Playdates","Training","Sitting","Meetups"].map(v => (
+              <legend>I'm looking for</legend>
+              {["Playdates", "Training", "Sitting", "Meetups"].map((v) => (
                 <label key={v}>
                   <input
                     type="radio"
-                    name="lookingFor"
+                    name="lookingForUi"
                     value={v}
-                    checked={form.lookingFor === v}
+                    checked={form.lookingForUi === v}
                     onChange={onChange}
                   />
                   {v}
@@ -92,61 +155,78 @@ export default function Profile() {
             </fieldset>
 
             <label>
-              Themen (kommasepariert)
+              Topics (comma separated)
               <input
                 name="topics"
-                placeholder="z. B. Walking, Health, Events"
+                placeholder="e.g., walks, health, events"
                 value={form.topics}
                 onChange={onChange}
               />
             </label>
 
             <label>
-              Bevorzugte Tage (kommasepariert)
+              Preferred days (comma separated)
               <input
                 name="days"
-                placeholder="z. B. Mo, Mi, Fr"
+                placeholder="e.g., Mon, Wed, Fri"
                 value={form.days}
                 onChange={onChange}
               />
             </label>
 
             <fieldset>
-              <legend>Nachrichten erlauben</legend>
+              <legend>Allow messages</legend>
               <label>
                 <input
                   type="radio"
-                  name="allowMessages"
+                  name="allowMessagesUi"
                   value="yes"
-                  checked={form.allowMessages === "yes"}
+                  checked={form.allowMessagesUi === "yes"}
                   onChange={onChange}
                 />
-                Ja
+                Yes
               </label>
               <label>
                 <input
                   type="radio"
-                  name="allowMessages"
+                  name="allowMessagesUi"
                   value="no"
-                  checked={form.allowMessages === "no"}
+                  checked={form.allowMessagesUi === "no"}
                   onChange={onChange}
                 />
-                Nein
+                No
               </label>
             </fieldset>
 
-            <button type="submit" className="btn">Speichern</button>
+            <button type="submit" className="btn" disabled={loading}>
+              {loading ? "Loading…" : "Save"}
+            </button>
           </form>
 
           <div className="profileCard">
-            <h2>Vorschau</h2>
-            <p><b>Bio:</b> {form.bio || "—"}</p>
-            <p><b>Ort:</b> {form.location || "—"}</p>
-            <p><b>Pet Type:</b> {form.petType}</p>
-            <p><b>Ich suche:</b> {form.lookingFor}</p>
-            <p><b>Themen:</b> {form.topics || "—"}</p>
-            <p><b>Tage:</b> {form.days || "—"}</p>
-            <p><b>Nachrichten erlaubt:</b> {form.allowMessages === "yes" ? "Ja" : "Nein"}</p>
+            <h2>Preview</h2>
+            <p>
+              <b>About:</b> {form.bio || "—"}
+            </p>
+            <p>
+              <b>Location:</b> {form.location || "—"}
+            </p>
+            <p>
+              <b>Pet type:</b> {form.petTypeUi}
+            </p>
+            <p>
+              <b>Looking for:</b> {form.lookingForUi}
+            </p>
+            <p>
+              <b>Topics:</b> {form.topics || "—"}
+            </p>
+            <p>
+              <b>Days:</b> {form.days || "—"}
+            </p>
+            <p>
+              <b>Messages allowed:</b>{" "}
+              {form.allowMessagesUi === "yes" ? "Yes" : "No"}
+            </p>
           </div>
         </div>
       </div>

@@ -1,4 +1,5 @@
-import { useState } from "react";
+// src/components/share/Share.jsx
+import { useMemo, useState } from "react";
 import {
   AddPhotoAlternate,
   AddReaction,
@@ -6,7 +7,7 @@ import {
   AddLocationAlt,
 } from "@mui/icons-material";
 import "./share.css";
-import { Users } from "../../dummyData";
+import { PostsApi } from "../../api/api";
 
 export default function Share({ addPost }) {
   const [input, setInput] = useState("");
@@ -19,10 +20,13 @@ export default function Share({ addPost }) {
   const [showFeelingInput, setShowFeelingInput] = useState(false);
   const [showLocationInput, setShowLocationInput] = useState(false);
   const [showCaptionInput, setShowCaptionInput] = useState(false);
-
   const [photoInputKey, setPhotoInputKey] = useState(Date.now());
 
-  const currentUser = Users[0];
+  // Live preview URL for the selected image (not uploaded)
+  const photoPreview = useMemo(
+    () => (photoFile ? URL.createObjectURL(photoFile) : null),
+    [photoFile]
+  );
 
   const hideAllInputs = () => {
     setShowPhotoInput(false);
@@ -40,7 +44,7 @@ export default function Share({ addPost }) {
 
   const handlePhotoChange = (e) => {
     if (e.target.files && e.target.files[0]) {
-      setPhotoFile(e.target.files[0]);
+      setPhotoFile(e.target.files[0]); // preview only
       hideAllInputs();
     }
   };
@@ -50,54 +54,50 @@ export default function Share({ addPost }) {
     hideAllInputs();
     setShowFeelingInput(true);
   };
-
   const handleLocationClick = (e) => {
     e.preventDefault();
     hideAllInputs();
     setShowLocationInput(true);
   };
-
   const handleCaptionClick = (e) => {
     e.preventDefault();
     hideAllInputs();
     setShowCaptionInput(true);
   };
 
-  const handleShare = (e) => {
+  const handleShare = async (e) => {
     e.preventDefault();
-    if (
-      !input.trim() &&
-      !photoFile &&
-      !feeling.trim() &&
-      !location.trim() &&
-      !caption.trim()
-    )
+
+    // Backend: content is @NotBlank — require it
+    if (!input.trim()) {
+      alert("Content is required.");
       return;
+    }
 
-    const photoUrl = photoFile ? URL.createObjectURL(photoFile) : "";
-
-    const newPost = {
-      id: Date.now(),
-      desc: input.trim(),
-      photo: photoUrl,
-      feeling: feeling.trim(),
-      location: location.trim(),
-      caption: caption.trim(),
-      date: "Just now",
-      userId: currentUser.id,
-      like: 0,
-      comment: 0,
+    // Map empty strings to null so backend doesn’t store empty text
+    const dto = {
+      content: input.trim(),
+      imageUrl: null, // set real URL after you implement upload
+      Feeling: feeling.trim() ? feeling.trim() : null,
+      Location: location.trim() ? location.trim() : null,
+      Caption: caption.trim() ? caption.trim() : null,
     };
 
-    addPost(newPost);
+    try {
+      const { data: created } = await PostsApi.create(dto);
+      addPost(created);
 
-    // 🔁 Alles zurücksetzen
-    setInput("");
-    setPhotoFile(null);
-    setFeeling("");
-    setLocation("");
-    setCaption("");
-    hideAllInputs();
+      // reset UI
+      setInput("");
+      setPhotoFile(null);
+      setFeeling("");
+      setLocation("");
+      setCaption("");
+      hideAllInputs();
+    } catch (err) {
+      console.error("Create post failed:", err?.response?.data || err);
+      alert("Couldn't create post. Check required fields.");
+    }
   };
 
   return (
@@ -106,7 +106,7 @@ export default function Share({ addPost }) {
         <div className="shareTop">
           <img
             className="shareProfileImg"
-            src={currentUser.profilePicture}
+            src={"/assets/person/noAvatar.png"}
             alt=""
             onClick={hideAllInputs}
           />
@@ -117,6 +117,30 @@ export default function Share({ addPost }) {
             onChange={(e) => setInput(e.target.value)}
           />
         </div>
+
+        {/* --- Live Preview (shows before sending) --- */}
+        {(photoPreview || feeling || location || caption) && (
+          <div className="sharePreview">
+            {photoPreview && (
+              <img
+                className="sharePreviewImg"
+                src={photoPreview}
+                alt="preview"
+              />
+            )}
+            <div className="sharePreviewMeta">
+              <div>
+                <strong>Feeling:</strong> {feeling || "—"}
+              </div>
+              <div>
+                <strong>Location:</strong> {location || "—"}
+              </div>
+              <div>
+                <strong>Caption:</strong> {caption || "—"}
+              </div>
+            </div>
+          </div>
+        )}
 
         <hr className="shareHr" />
 
