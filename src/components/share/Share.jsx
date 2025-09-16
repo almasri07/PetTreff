@@ -1,5 +1,5 @@
 // src/components/share/Share.jsx
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import {
   AddPhotoAlternate,
   AddReaction,
@@ -7,7 +7,7 @@ import {
   AddLocationAlt,
 } from "@mui/icons-material";
 import "./share.css";
-import { PostsApi } from "../../api/api";
+import { PostsApi, ProfileApi } from "../../api/api";
 
 export default function Share({ addPost }) {
   const [input, setInput] = useState("");
@@ -21,6 +21,20 @@ export default function Share({ addPost }) {
   const [showLocationInput, setShowLocationInput] = useState(false);
   const [showCaptionInput, setShowCaptionInput] = useState(false);
   const [photoInputKey, setPhotoInputKey] = useState(Date.now());
+  const [profilePicUrl, setProfilePicUrl] = useState("");
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await ProfileApi.getMe();
+        setProfilePicUrl(
+          data.urlProfilePicture || "/assets/default-avatar.png"
+        );
+      } catch {
+        setProfilePicUrl("/assets/default-avatar.png");
+      }
+    })();
+  }, []);
 
   // Live preview URL for the selected image (not uploaded)
   const photoPreview = useMemo(
@@ -104,12 +118,7 @@ export default function Share({ addPost }) {
     <div className="share">
       <div className="shareWrapper">
         <div className="shareTop">
-          <img
-            className="shareProfileImg"
-            src={"/assets/person/noAvatar.png"}
-            alt=""
-            onClick={hideAllInputs}
-          />
+          <img className="shareProfileImg" src={profilePicUrl} alt="Profile" />
           <input
             placeholder="What's on your mind?"
             className="shareInput"

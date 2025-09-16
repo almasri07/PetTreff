@@ -8,18 +8,33 @@ import {
 } from "@mui/icons-material";
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useRef, useEffect } from "react";
-import { UsersApi } from "../../api/api"; // <— wichtig
+import { UsersApi, ProfileApi } from "../../api/api";
 
 export default function Topbar({ onHamburgerClick }) {
   const navigate = useNavigate();
   const [openPopup, setOpenPopup] = useState(null); // "friend" | "chat" | "notify" | "match" | null
   const dropdownRef = useRef(null);
+  const [profilePicUrl, setProfilePicUrl] = useState("");
 
   // === Suche ===
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [searchOpen, setSearchOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Fetch actual user's profile picture
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await ProfileApi.getMe();
+        setProfilePicUrl(
+          data.urlProfilePicture || "/assets/default-avatar.png"
+        );
+      } catch {
+        setProfilePicUrl("/assets/default-avatar.png");
+      }
+    })();
+  }, []);
 
   // NEU: Vollergebnis-Seite öffnen
   const goToFullResults = () => {
@@ -67,25 +82,6 @@ export default function Topbar({ onHamburgerClick }) {
     return () => clearTimeout(t);
   }, [query]);
 
-  // Enter drückt: sofort suchen
-  // const handleSearchKeyDown = async (e) => {
-  //  if (e.key === "Enter") {
-  /*
-      e.preventDefault();
-      if (!query.trim()) return;
-      setLoading(true);
-      try {
-        const { data } = await UsersApi.search(query.trim());
-        setResults(data || []);
-        setSearchOpen(true);
-      } finally {
-        setLoading(false);
-      }
-    } else if (e.key === "Escape") {
-      setSearchOpen(false);
-    }
-  };
-  */
   // GEÄNDERT: Enter öffnet /search?query=...
   const handleSearchKeyDown = (e) => {
     if (e.key === "Enter") {
@@ -120,7 +116,6 @@ export default function Topbar({ onHamburgerClick }) {
           {searchOpen && (
             <div className="searchDropdown">
               {loading && <div className="searchItem muted">Search…</div>}
-              {/* NEU: Footer-Button */}
               {!loading && results.length > 0 && (
                 <button className="searchSeeAll" onClick={goToFullResults}>
                   Show all results ({results.length})
@@ -131,7 +126,7 @@ export default function Topbar({ onHamburgerClick }) {
                 results.map((u) => (
                   <Link
                     key={u.id}
-                    to={`/users/${u.id}`} // passe an deine Routen an
+                    to={`/users/${u.id}`}
                     className="searchItem"
                     onClick={() => setSearchOpen(false)}
                   >
@@ -188,18 +183,13 @@ export default function Topbar({ onHamburgerClick }) {
           </div>
         </div>
 
-        {/* Deine bestehenden Popups bleiben wie gehabt … */}
         {openPopup && (
           <div className="topbarDropdown">
             {/* friend / match / chat / notify Inhalte */}
           </div>
         )}
 
-        <img
-          src="assets/logan-weaver-lgnwvr-iBAKOYi-vVQ-unsplash.jpg"
-          alt=""
-          className="topbarImg"
-        />
+        <img src={profilePicUrl} alt="Profile" className="topbarImg" />
       </div>
     </div>
   );

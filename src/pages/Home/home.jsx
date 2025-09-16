@@ -6,10 +6,9 @@ import "./home.css";
 import { Users } from "../../dummyData"; // assuming Users has profile info, etc.
 import { useEffect, useState } from "react";
 
-
 export default function Home() {
-    const [showSidebarMenu, setShowSidebarMenu] = useState(false);
-     useEffect(() => {
+  const [showSidebarMenu, setShowSidebarMenu] = useState(false);
+  useEffect(() => {
     function handleResize() {
       if (window.innerWidth > 768) {
         setShowSidebarMenu(false); // Menü schließen, wenn wieder groß
@@ -20,8 +19,8 @@ export default function Home() {
   }, []);
   return (
     <>
- <Topbar onHamburgerClic={() => setShowSidebarMenu(p => !p)} />
-  {alert(showSidebarMenu)}
+      <Topbar onHamburgerClic={() => setShowSidebarMenu((p) => !p)} />
+      {alert(showSidebarMenu)}
       <div className="homeContainer">
         <div className="sidebar">
           <Sidebar />
@@ -34,10 +33,15 @@ export default function Home() {
 
       {/* Hamburger Menü Overlay */}
       {showSidebarMenu && (
-        
-        alert(showSidebarMenu),
-        <div className="sidebarMenuOverlay" onClick={() => setShowSidebarMenu(false)}>
-          <div className="sidebarMenuPanel" onClick={e => e.stopPropagation()}>
+        // alert(showSidebarMenu),
+        <div
+          className="sidebarMenuOverlay"
+          onClick={() => setShowSidebarMenu(false)}
+        >
+          <div
+            className="sidebarMenuPanel"
+            onClick={(e) => e.stopPropagation()}
+          >
             <Sidebar />
             <Rightbar />
           </div>

@@ -7,13 +7,14 @@ export const api = axios.create({
     withCredentials: true,
 });
 
-// === Profile ===
+// === Profile === 
 export const ProfileApi = {
-    getMe: () => api.get("api/profile"),
-    updateMe: (dto) => api.put("api/profile", dto),
+    getMe: () => api.get("api/profile"), updateMe: (dto) =>
+        api.put("api/profile", dto),
     getByUserId: (id) => api.get(`/api/profile/${id}`),
 };
 
+//   `/api/users/${id}`
 // === Auth ===
 export const AuthApi = {
     login: ({ username, password }) =>

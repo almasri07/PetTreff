@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import Topbar from "../../components/topbar/Topbar";
 import Sidebar from "../../components/sidebar/Sidebar";
 import { ProfileApi, AuthApi } from "../../api/api";
+import { AddPhotoAlternate } from "@mui/icons-material";
 import "./profile.css";
 
 /** Local enum mappers (UI <-> backend enums) */
@@ -29,30 +30,34 @@ const fromLookingEnum = (e) =>
 
 export default function Profile() {
   const [form, setForm] = useState({
-    username: "", // shown in heading
+    username: "",
     bio: "",
     location: "",
-    petTypeUi: "Dog", // UI values
+    petTypeUi: "Dog",
     lookingForUi: "Playdates",
     topics: "",
     days: "",
-    allowMessagesUi: "yes", // "yes" | "no"
+    allowMessagesUi: "yes",
+    urlProfilePicture: "",
   });
 
   const [loading, setLoading] = useState(false);
+  const [showPhotoInput, setShowPhotoInput] = useState(false);
+  const [photoFile, setPhotoFile] = useState(null);
+  const photoInputRef = useRef(null);
+
+  // Live preview for selected image file
+  const photoPreview = useMemo(
+    () => (photoFile ? URL.createObjectURL(photoFile) : null),
+    [photoFile]
+  );
 
   useEffect(() => {
     (async () => {
       setLoading(true);
       try {
-        console.log("Loading...");
-        // Run both requests in parallel
         const { data: user } = await AuthApi.me();
         const { data: profile } = await ProfileApi.getMe();
-        console.log(":::::::::::::::::::");
-        console.log("USERNAME:" + user.username);
-        console.log(profile.bio);
-
         setForm((f) => ({
           ...f,
           username: user?.username ?? "unknown",
@@ -63,6 +68,7 @@ export default function Profile() {
           topics: profile?.topics ?? "",
           days: profile?.days ?? "",
           allowMessagesUi: profile?.allowMessages ? "yes" : "no",
+          urlProfilePicture: profile?.urlProfilePicture ?? "",
         }));
       } catch (err) {
         console.error("Failed to load profile:", err);
@@ -77,8 +83,34 @@ export default function Profile() {
     setForm((f) => ({ ...f, [name]: value }));
   };
 
+  // Handle file selection
+  const handlePhotoChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setPhotoFile(e.target.files[0]);
+      setShowPhotoInput(false);
+    }
+  };
+
+  // Simulate upload and get URL (replace with real upload logic)
+  const uploadPhotoAndGetUrl = async (file) => {
+    // TODO: Replace with real upload logic (e.g., upload to S3 or backend)
+    // For now, just return a fake URL after a short delay
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve(URL.createObjectURL(file));
+      }, 800);
+    });
+  };
+
   const onSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
+
+    let urlProfilePicture = form.urlProfilePicture;
+    if (photoFile) {
+      urlProfilePicture = await uploadPhotoAndGetUrl(photoFile);
+    }
+
     const dto = {
       bio: form.bio,
       location: form.location,
@@ -86,15 +118,19 @@ export default function Profile() {
       lookingFor: toLookingEnum(form.lookingForUi),
       topics: form.topics,
       days: form.days,
+      urlProfilePicture,
       allowMessages: form.allowMessagesUi === "yes",
     };
     try {
-      console.log("Saving...", dto);
-      await ProfileApi.updateMe(dto); // <-- PUT /api/profile/me
+      await ProfileApi.updateMe(dto);
+      setForm((f) => ({ ...f, urlProfilePicture }));
+      setPhotoFile(null);
       alert("Saved.");
     } catch (err) {
       console.error("Save failed:", err);
       alert("Save failed.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -121,6 +157,50 @@ export default function Profile() {
                 onChange={onChange}
               />
             </label>
+
+            <div className="profilePhotoSection">
+              <label className="profilePhotoLabel" htmlFor="profilePhotoInput">
+                Profile picture
+              </label>
+              <div className="profilePhotoActions">
+                <button
+                  type="button"
+                  className="profilePhotoButton"
+                  onClick={() => {
+                    setShowPhotoInput(true);
+                    if (photoInputRef.current) photoInputRef.current.value = "";
+                    photoInputRef.current && photoInputRef.current.click();
+                  }}
+                >
+                  <AddPhotoAlternate style={{ fontSize: 20 }} />
+                  Import Photo
+                </button>
+                <span className="profilePhotoHint">or paste URL below</span>
+              </div>
+              <input
+                type="file"
+                accept="image/*"
+                style={{ display: "none" }}
+                ref={photoInputRef}
+                id="profilePhotoInput"
+                name="profilePhotoInput"
+                onChange={handlePhotoChange}
+              />
+              <input
+                name="urlProfilePicture"
+                placeholder="https://example.com/myphoto.jpg"
+                value={form.urlProfilePicture}
+                onChange={onChange}
+                className="profilePhotoUrlInput"
+              />
+              {(photoPreview || form.urlProfilePicture) && (
+                <img
+                  src={photoPreview || form.urlProfilePicture}
+                  alt="Profile Preview"
+                  className="profilePhotoPreview"
+                />
+              )}
+            </div>
 
             <fieldset>
               <legend>Pet type</legend>
@@ -205,6 +285,14 @@ export default function Profile() {
 
           <div className="profileCard">
             <h2>Preview</h2>
+            {(photoPreview || form.urlProfilePicture) && (
+              <img
+                src={photoPreview || form.urlProfilePicture}
+                alt="Profile"
+                className="profilePhotoPreview"
+                style={{ marginBottom: 10 }}
+              />
+            )}
             <p>
               <b>About:</b> {form.bio || "—"}
             </p>
