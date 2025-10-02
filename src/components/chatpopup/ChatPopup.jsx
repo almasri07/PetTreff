@@ -1,106 +1,96 @@
 /*
-import { useState } from "react";
-import "./chatPopup.css";
+//                       MIT PROFILE_PICTURE
 
-export default function ChatPopup({ onClose }) {
-  const [input, setInput] = useState("");
-  const [messages, setMessages] = useState([
-    { sender: "Shirley", text: "Hey there!" },
-    { sender: "You", text: "Hello 😊" },
-  ]);
-
-  const handleSend = () => {
-    if (input.trim() === "") return;
-
-    setMessages([...messages, { sender: "You", text: input }]);
-    setInput(""); // clear input
-  };
-
-  return (
-    <div className="chatPopup">
-      <div className="chatHeader">
-        <span>Chat</span>
-        <button className="chatCloseBtn" onClick={onClose}>
-          ×
-        </button>
-      </div>
-
-      <div className="chatMessages">
-        {messages.map((msg, idx) => (
-          <p key={idx}>
-            <strong>{msg.sender}:</strong> {msg.text}
-          </p>
-        ))}
-      </div>
-
-      <div className="chatInputWrapper">
-        <input
-          className="chatInput"
-          placeholder="Type a message..."
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSend()}
-        />
-        <button className="chatSendBtn" onClick={handleSend}>
-          Send
-        </button>
-      </div>
-    </div>
-  );
-}*/
-// src/components/ChatPopup.jsx
+// src/components/ChatPopup/ChatPopup.jsx  (SESSION/COOKIE AUTH ONLY)
 import { useEffect, useRef, useState } from "react";
 import "./chatPopup.css";
 import SockJS from "sockjs-client";
 import { Client } from "@stomp/stompjs";
+import { ChatApi, UsersApi, PresenceApi } from "../../api/api";
+import { fmtTime } from "../../utils/datetime";
 
-const API_BASE = import.meta.env.VITE_API_BASE; // e.g. http://localhost:8080
-const WS_URL = import.meta.env.VITE_WS_URL; // e.g. http://localhost:8080/ws
+import Online from "../online/Online";
 
-export default function ChatPopup({
-  friends = [],
-  currentUser,
-  token,
-  onClose,
-}) {
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8080";
+const WS_BASE = `${API_BASE}/ws`;
+
+export default function ChatPopup({ currentUser, onClose }) {
+  const [friends, setFriends] = useState([]);
+  const [onlineIds, setOnlineIds] = useState([]);
   const [selectedFriend, setSelectedFriend] = useState(null);
-  const [messages, setMessages] = useState([]); // ChatMessageDTO[]
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
+
   const stompRef = useRef(null);
   const subRef = useRef(null);
   const bottomRef = useRef(null);
 
-  // Auto-scroll
+  // === Fetch friends of current user ===
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    if (!currentUser?.id) return;
 
-  // ---- WebSocket connect (once) ----
+    (async () => {
+      try {
+        const { data } = await UsersApi.friends(currentUser.id);
+        const mapped = (data || []).map((f) => ({
+          id: f.id ?? f.user?.id,
+          username: f.username ?? f.user?.username,
+          profilePicture: f.profilePicture ?? f.user?.urlProfilePicture,
+        }));
+        setFriends(mapped);
+      } catch (e) {
+        console.error("Failed to fetch friends", e);
+      }
+    })();
+  }, [currentUser?.id]);
+
+  // === Poll online friends ===
   useEffect(() => {
-    const sock = new SockJS(WS_URL);
+    let cancelled = false;
+
+    const loadOnline = async () => {
+      try {
+        const { data } = await PresenceApi.onlineFriends();
+        if (!cancelled) setOnlineIds(data || []);
+      } catch (e) {
+        console.error("Failed to fetch online friends", e);
+      }
+    };
+
+    loadOnline();
+    const timer = setInterval(loadOnline, 10000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, []);
+
+  // === WebSocket connection for chat ===
+  useEffect(() => {
+    const sock = new SockJS(WS_BASE, null, {
+      transportOptions: {
+        xhrStream: { withCredentials: true },
+        xhrPolling: { withCredentials: true },
+      },
+    });
+
     const client = new Client({
       webSocketFactory: () => sock,
       reconnectDelay: 3000,
       onConnect: () => {
-        // Personal queue subscription
         subRef.current = client.subscribe("/user/queue/messages", (frame) => {
-          const dto = JSON.parse(frame.body); // {id, senderUsername, recipientUsername, content, dateTime}
-          // Nur anzeigen, wenn es zur aktuellen Konversation gehört (optional)
-          if (!selectedFriend || !currentUser) {
+          try {
+            const dto = JSON.parse(frame.body);
             setMessages((prev) => [...prev, dto]);
-            return;
+          } catch (e) {
+            console.error("WS frame parse error:", e);
           }
-          const involvesSelected =
-            (dto.senderUsername === selectedFriend.username &&
-              dto.recipientUsername === currentUser.username) ||
-            (dto.senderUsername === currentUser.username &&
-              dto.recipientUsername === selectedFriend.username);
-          setMessages((prev) => (involvesSelected ? [...prev, dto] : prev));
         });
       },
     });
 
-    if (token) client.connectHeaders = { Authorization: `Bearer ${token}` };
+    client.debug = (msg) => console.log("[STOMP]", msg);
     client.activate();
     stompRef.current = client;
 
@@ -111,60 +101,77 @@ export default function ChatPopup({
       client.deactivate();
       stompRef.current = null;
     };
-  }, [token, currentUser, selectedFriend]);
+  }, []);
 
-  // ---- Load history when friend changes ----
+  // === Load history when a friend is selected ===
   useEffect(() => {
-    if (!selectedFriend || !currentUser) return;
+    if (!selectedFriend?.id || !currentUser?.id) return;
+
     (async () => {
-      const url = `${API_BASE}/messages/${currentUser.id}/${selectedFriend.id}`;
-      const res = await fetch(url, {
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      });
-      if (!res.ok) {
-        console.error("History HTTP", res.status);
-        return;
+      try {
+        const res = await ChatApi.history(currentUser.id, selectedFriend.id);
+        const list = Array.isArray(res.data) ? res.data : [];
+
+        setMessages((prev) => {
+          const isThisPair = (m) =>
+            (m.senderUsername === currentUser.username &&
+              m.recipientUsername === selectedFriend.username) ||
+            (m.senderUsername === selectedFriend.username &&
+              m.recipientUsername === currentUser.username);
+
+          const others = prev.filter((m) => !isThisPair(m));
+          return [...others, ...list];
+        });
+      } catch (err) {
+        console.error("Failed to load history:", err);
       }
-      const list = await res.json(); // List<ChatMessageDTO>
-      setMessages(list);
     })();
-  }, [selectedFriend, currentUser, token]);
+  }, [selectedFriend?.id, currentUser?.id]);
 
   const handleSend = () => {
-    if (!input.trim() || !selectedFriend) return;
+    const content = input.trim();
+    if (!content || !selectedFriend || !currentUser) return;
+
     const client = stompRef.current;
     if (!client || !client.connected) return;
 
-    // Payload to @MessageMapping("/chat") -> ChatMessage entity fields
-    const body = {
-      senderId: currentUser.id,
-      recipientId: selectedFriend.id,
-      content: input.trim(),
-    };
-
     client.publish({
       destination: "/app/chat",
-      body: JSON.stringify(body),
-      // headers: token ? { Authorization: `Bearer ${token}` } : undefined, // only if server checks it here
+      body: JSON.stringify({
+        recipientId: selectedFriend.id,
+        content,
+      }),
     });
 
-    // Optimistic echo (optional)
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: `tmp-${Date.now()}`,
-        senderUsername: currentUser.username,
-        recipientUsername: selectedFriend.username,
-        content: input.trim(),
-        dateTime: new Date().toISOString(),
-      },
-    ]);
     setInput("");
   };
+
+  const goBack = () => {
+    setSelectedFriend(null);
+    setInput("");
+  };
+
+  // === Messages for the active conversation ===
+  const visible = selectedFriend
+    ? messages.filter(
+        (m) =>
+          (m.senderUsername === currentUser?.username &&
+            m.recipientUsername === selectedFriend.username) ||
+          (m.senderUsername === selectedFriend.username &&
+            m.recipientUsername === currentUser?.username)
+      )
+    : [];
 
   return (
     <div className="chatPopup">
       <div className="chatHeader">
+        {selectedFriend && (
+          <button
+            className="chatBackBtn"
+            onClick={goBack}
+            title="Back"
+          ></button>
+        )}
         <span>
           {selectedFriend
             ? `Chat with ${selectedFriend.username}`
@@ -175,34 +182,33 @@ export default function ChatPopup({
         </button>
       </div>
 
-      {!selectedFriend && (
-        <div className="friendList">
+      {!selectedFriend ? (
+        // Friend list with Online component
+        <ul className="friendList">
           {friends.map((f) => (
             <div
               key={f.id}
               className="friendItem"
               onClick={() => setSelectedFriend(f)}
+              style={{ cursor: "pointer" }}
             >
-              <img src={f.profilePicture} alt="" className="friendImg" />
-              <span>{f.username}</span>
+              <Online user={f} online={onlineIds.includes(f.id)} />
             </div>
           ))}
-        </div>
-      )}
-
-      {selectedFriend && (
+        </ul>
+      ) : (
         <>
+          <div className="chatSubHeader">
+            <button className="chatBackLink" onClick={goBack}>
+              ← Back to friends
+            </button>
+          </div>
+
           <div className="chatMessages">
-            {messages.map((m, idx) => (
+            {visible.map((m, idx) => (
               <p key={m.id ?? idx}>
-                <strong>
-                  {m.senderUsername ??
-                    (m.senderId === currentUser.id
-                      ? currentUser.username
-                      : selectedFriend.username)}
-                  :
-                </strong>{" "}
-                {m.content}
+                <strong>{m.senderUsername}:</strong> {m.content}
+                <span className="time"> {fmtTime(m.dateTime)}</span>
               </p>
             ))}
             <div ref={bottomRef} />
@@ -214,7 +220,272 @@ export default function ChatPopup({
               placeholder={`Message ${selectedFriend.username}...`}
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSend()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleSend();
+                if (e.key === "Escape") goBack();
+              }}
+            />
+            <button className="chatSendBtn" onClick={handleSend}>
+              Send
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );  
+}
+*/
+
+//   //  RIGHT VERSION  TIME 6:20 pm
+
+//  OHNE PROFILE_PICTURE
+// src/components/ChatPopup/ChatPopup.jsx  (SESSION/COOKIE AUTH ONLY)
+import { useEffect, useRef, useState } from "react";
+import "./chatPopup.css";
+import SockJS from "sockjs-client";
+import { Client } from "@stomp/stompjs";
+import { ChatApi, UsersApi, PresenceApi } from "../../api/api";
+import { fmtTime } from "../../utils/datetime";
+
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8080";
+const WS_BASE = `${API_BASE}/ws`;
+
+export default function ChatPopup({ currentUser, onClose }) {
+  const [friends, setFriends] = useState([]); // [{ id:number, username:string }]
+  const [onlineIdSet, setOnlineIdSet] = useState(new Set()); // Set<number>
+  const [onlineNameSet, setOnlineNameSet] = useState(new Set()); // Set<string lowercased>
+  const [selectedFriend, setSelectedFriend] = useState(null);
+  const [messages, setMessages] = useState([]); // ChatMessageDTO[]
+  const [input, setInput] = useState("");
+
+  const stompRef = useRef(null);
+  const subRef = useRef(null);
+  const bottomRef = useRef(null);
+
+  // --------------------   Hilfsfunktionen --------------------------------------------------------
+  const toNum = (v) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const normalizeFriends = (data) =>
+    (data || [])
+      .map((f) => ({
+        id: toNum(f?.id ?? f?.user?.id ?? f?.friendId),
+        username: String(
+          f?.username ?? f?.user?.username ?? f?.friend?.username ?? ""
+        ).trim(),
+      }))
+      .filter((x) => x.id !== null && x.username);
+
+  const markIsOnline = (f) => {
+    // bevorzugt: id, sonst username
+    if (onlineIdSet.size > 0) return onlineIdSet.has(f.id);
+    if (onlineNameSet.size > 0)
+      return onlineNameSet.has(f.username.toLowerCase());
+    return false;
+  };
+
+  // --------------------- fetch Freunde ----------------------------------
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    (async () => {
+      try {
+        const { data } = await UsersApi.friends(currentUser.id);
+        setFriends(normalizeFriends(data));
+      } catch (e) {
+        console.error("Failed to fetch friends", e);
+      }
+    })();
+  }, [currentUser?.id]);
+
+  // ------------------- Poll online Fruende ------------------------------------------------
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadOnline = async () => {
+      try {
+        const { data } = await PresenceApi.onlineFriends(); // UserDTO[]
+        if (!cancelled) {
+          const idSet = new Set((data || []).map((u) => u.id));
+          setOnlineIdSet(idSet);
+        }
+      } catch (e) {
+        console.error("Failed to fetch online friends", e);
+      }
+    };
+
+    loadOnline();
+    const t = setInterval(loadOnline, 10000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, []);
+
+  // ----------------------- WebSocket Verbindung für Chat --------------------------------------
+  useEffect(() => {
+    const sock = new SockJS(WS_BASE, null, {
+      transportOptions: {
+        xhrStream: { withCredentials: true },
+        xhrPolling: { withCredentials: true },
+      },
+    });
+
+    const client = new Client({
+      webSocketFactory: () => sock,
+      reconnectDelay: 3000,
+      onConnect: () => {
+        subRef.current = client.subscribe("/user/queue/messages", (frame) => {
+          try {
+            const dto = JSON.parse(frame.body); // ChatMessageDTO
+            setMessages((prev) => [...prev, dto]);
+          } catch (e) {
+            console.error("WS frame parse error:", e);
+          }
+        });
+      },
+    });
+
+    client.debug = (msg) => console.log("[STOMP]", msg);
+    client.activate();
+    stompRef.current = client;
+
+    return () => {
+      try {
+        subRef.current?.unsubscribe();
+      } catch {}
+      client.deactivate();
+      stompRef.current = null;
+    };
+  }, []);
+
+  //  -------------  history laden, wenn Freund ausgewählt  ------------------------
+  useEffect(() => {
+    if (!selectedFriend?.id || !currentUser?.id) return;
+    (async () => {
+      try {
+        const res = await ChatApi.history(currentUser.id, selectedFriend.id);
+        const list = Array.isArray(res.data) ? res.data : [];
+        setMessages((prev) => {
+          const isThisPair = (m) =>
+            (m.senderUsername === currentUser.username &&
+              m.recipientUsername === selectedFriend.username) ||
+            (m.senderUsername === selectedFriend.username &&
+              m.recipientUsername === currentUser.username);
+          const others = prev.filter((m) => !isThisPair(m));
+          return [...others, ...list];
+        });
+      } catch (err) {
+        console.error("Failed to load history:", err);
+      }
+    })();
+  }, [selectedFriend?.id, currentUser?.id]);
+
+  // -------------------- Auto-scrollen zu untersten Nachricht ------------------------
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, selectedFriend]);
+
+  // -------------------- Nachricht senden ----------------------------------
+  const handleSend = () => {
+    const content = input.trim();
+    if (!content || !selectedFriend || !currentUser) return;
+    const client = stompRef.current;
+    if (!client || !client.connected) return;
+
+    client.publish({
+      destination: "/app/chat",
+      body: JSON.stringify({ recipientId: selectedFriend.id, content }),
+    });
+
+    setInput("");
+  };
+
+  const goBack = () => {
+    setSelectedFriend(null);
+    setInput("");
+  };
+
+  // -------------------- Nachrichten für die aktive Konversation ------------------------
+  const visible = selectedFriend
+    ? messages.filter(
+        (m) =>
+          (m.senderUsername === currentUser?.username &&
+            m.recipientUsername === selectedFriend.username) ||
+          (m.senderUsername === selectedFriend.username &&
+            m.recipientUsername === currentUser?.username)
+      )
+    : [];
+
+  // ----------------------------- Render ---------------------------------
+  return (
+    <div className="chatPopup">
+      <div className="chatHeader">
+        {selectedFriend && (
+          <button className="chatBackBtn" onClick={goBack} title="Back" />
+        )}
+        <span>
+          {selectedFriend
+            ? `Chat with ${selectedFriend.username}`
+            : "Choose a friend"}
+        </span>
+        <button className="chatCloseBtn" onClick={onClose}>
+          ×
+        </button>
+      </div>
+
+      {!selectedFriend ? (
+        // Liste der Freunde
+        <ul className="friendList">
+          {friends.map((f) => {
+            const isOnline = markIsOnline(f);
+            return (
+              <li
+                key={f.id}
+                className="friendItem rightbarFriend"
+                onClick={() => setSelectedFriend(f)}
+                style={{ cursor: "pointer" }}
+              >
+                <div className="rightbarProfileImgContainer" />
+                <span className="rightbarUsername">
+                  {f.username}{" "}
+                  <em style={{ fontSize: 12, opacity: 0.8 }}>
+                    ({isOnline ? "online" : "offline"})
+                  </em>
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <>
+          <div className="chatSubHeader">
+            <button className="chatBackLink" onClick={goBack}>
+              ← Back to friends
+            </button>
+          </div>
+
+          <div className="chatMessages">
+            {visible.map((m, idx) => (
+              <p key={m.id ?? idx}>
+                <strong>{m.senderUsername}:</strong> {m.content}
+                <span className="time"> {fmtTime(m.dateTime)}</span>
+              </p>
+            ))}
+            <div ref={bottomRef} />
+          </div>
+
+          <div className="chatInputWrapper">
+            <input
+              className="chatInput"
+              placeholder={`Message ${selectedFriend.username}...`}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleSend();
+                if (e.key === "Escape") goBack();
+              }}
             />
             <button className="chatSendBtn" onClick={handleSend}>
               Send

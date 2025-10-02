@@ -1,13 +1,12 @@
-// src/pages/UserPublicProfile.jsx
 import { useEffect, useState, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import Topbar from "../../components/topbar/Topbar";
 import Sidebar from "../../components/sidebar/Sidebar";
 import { UsersApi, ProfileApi, FriendshipsApi, AuthApi } from "../../api/api";
-// === Enum-Mapper (wie in deinem Profile.jsx) ===
+//import "./userPublicProfile.css";
+
 const fromPetEnum = (e) =>
   ({ DOG: "Dog", CAT: "Cat", BIRD: "Bird", OTHER: "Other" }[e] || "Other");
-
 const fromLookingEnum = (e) =>
   ({
     PLAYDATES: "Playdates",
@@ -17,20 +16,21 @@ const fromLookingEnum = (e) =>
   }[e] || "Playdates");
 
 export default function UserPublicProfile() {
-  const { id } = useParams(); // /users/:id
+  const { id } = useParams();
   const [me, setMe] = useState(null);
+  const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
 
-  const [user, setUser] = useState(null); // UsersApi.get
-  const [profile, setProfile] = useState(null); // ProfileApi.getByUserId
   const [loading, setLoading] = useState(true);
   const [friendBusy, setFriendBusy] = useState(false);
-  const [friendSent, setFriendSent] = useState(false);
+  const [isPending, setIsPending] = useState(false); // Backend liefert: "PENDING" | "NONE"
   const [error, setError] = useState("");
+  const [friendStatus, setFriendStatus] = useState(null); // "none" | "pending" | "friends"
 
-  const isSelf = useMemo(() => {
-    if (!me || !user) return false;
-    return String(me.id) === String(user.id);
-  }, [me, user]);
+  const isSelf = useMemo(
+    () => !!me && !!user && String(me.id) === String(user.id),
+    [me, user]
+  );
 
   useEffect(() => {
     let abort = false;
@@ -39,7 +39,6 @@ export default function UserPublicProfile() {
         setLoading(true);
         setError("");
 
-        // Eigene Identität laden (um isSelf/Buttons zu steuern)
         const [{ data: meData }, { data: userDto }] = await Promise.all([
           AuthApi.me(),
           UsersApi.get(id),
@@ -48,15 +47,30 @@ export default function UserPublicProfile() {
         setMe(meData);
         setUser(userDto);
 
-        // Profil-Daten des fremden Users (bio, location, enums ...)
+        // Profil laden (tolerant gegen 404)
         try {
           const { data: prof } = await ProfileApi.getByUserId(id);
           if (!abort) setProfile(prof);
-        } catch (e) {
-          // Kein öffentliches Profil vorhanden? Dann leer lassen.
+        } catch {
           if (!abort) setProfile(null);
         }
-      } catch (e) {
+
+        // Status: "PENDING" | "NONE"
+        try {
+          console.log("Checking friendship status with user id:", userDto.id);
+          const res = await FriendshipsApi.getStatus(userDto.id);
+          console.log("------:", res?.data.status);
+          if (!abort) {
+            console.log("--voher---- isPending??????:", isPending);
+            setIsPending(res?.data?.status === "PENDING");
+            setFriendStatus(res?.data?.status);
+            console.log("------ isPending??????:", isPending);
+          }
+          console.log("------ isPending??????:", isPending);
+        } catch {
+          if (!abort) setIsPending(false);
+        }
+      } catch {
         if (!abort) setError("Konnte Profil nicht laden.");
       } finally {
         if (!abort) setLoading(false);
@@ -68,15 +82,24 @@ export default function UserPublicProfile() {
   }, [id]);
 
   const handleAddFriend = async () => {
-    if (!user) return;
+    if (!user || isPending) return;
     try {
       setFriendBusy(true);
       setError("");
-      // Typischer DTO: { recipientId } – ggf. an dein Backend anpassen.
-      await FriendshipsApi.create({ recipientId: user.id });
-      setFriendSent(true);
+      await FriendshipsApi.create({ friendId: user.id }); // Backend erwartet friendId
+      setIsPending(true); // optimistic UI
     } catch (e) {
-      setError("Freundschaftsanfrage fehlgeschlagen.");
+      const code = e?.response?.status || e?.status;
+      const msg =
+        e?.response?.data?.message ||
+        e?.response?.data?.error ||
+        e?.message ||
+        "";
+      if (code === 409 || /already exists|pending|duplicate/i.test(msg)) {
+        setIsPending(true);
+      } else {
+        setError("Freundschaftsanfrage fehlgeschlagen.");
+      }
     } finally {
       setFriendBusy(false);
     }
@@ -84,71 +107,56 @@ export default function UserPublicProfile() {
 
   return (
     <>
-      <Topbar />
+      <Topbar
+        friendStatus={friendStatus}
+        viewedUserId={user?.id}
+        onSendFriendRequest={handleAddFriend}
+      />
       <div className="homeContainer">
         <Sidebar />
 
-        <div
-          className="profileContainer"
-          style={{ padding: 16, width: "100%" }}
-        >
-          {loading && <div>Wird geladen…</div>}
-          {!loading && error && <div style={{ color: "salmon" }}>{error}</div>}
+        <div className="profileContainer">
+          {loading && <div className="loading">Wird geladen…</div>}
+          {!loading && error && <div className="error">{error}</div>}
 
           {!loading && user && (
-            <div
-              className="profileCard"
-              style={{
-                border: "1px solid #333",
-                borderRadius: 12,
-                padding: 16,
-                maxWidth: 820,
-              }}
-            >
-              <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+            <div className="profileCard">
+              <div className="profileHeader">
                 <img
+                  className="profileAvatar"
                   src={user.profilePictureUrl || "/assets/default-avatar.png"}
                   alt={user.username}
-                  style={{
-                    width: 84,
-                    height: 84,
-                    borderRadius: "50%",
-                    objectFit: "cover",
-                  }}
                 />
-                <div style={{ flex: 1 }}>
-                  <h1 style={{ margin: 0 }}>{user.username}</h1>
-                  <div style={{ opacity: 0.75 }}>
+
+                <div className="profileHeadText">
+                  <h1 className="profileTitle">{user.username}</h1>
+                  <div className="profileLocation">
                     {profile?.location ? `📍 ${profile.location}` : "📍 —"}
                   </div>
                 </div>
 
-                {!isSelf && (
-                  <button
-                    className="btn"
-                    disabled={friendBusy || friendSent}
-                    onClick={handleAddFriend}
-                    style={{
-                      padding: "10px 16px",
-                      borderRadius: 8,
-                      border: "1px solid #444",
-                      background: friendSent ? "#2e7d32" : "#1f1f1f",
-                      color: "#fff",
-                      cursor: friendBusy || friendSent ? "default" : "pointer",
-                    }}
-                  >
-                    {friendSent
-                      ? "Request sent ✓"
-                      : friendBusy
-                      ? "Sending…"
-                      : "Add Friend"}
-                  </button>
-                )}
+                {!isSelf &&
+                  (isPending ? (
+                    <button
+                      className="profileButton profileButton--success"
+                      disabled
+                    >
+                      Request pending…
+                    </button>
+                  ) : (
+                    <button
+                      className="profileButton profileButton--primary"
+                      disabled={friendBusy}
+                      onClick={handleAddFriend}
+                    >
+                      {friendBusy ? "Sending…" : "Add Friend"}
+                    </button>
+                  ))}
               </div>
 
-              <hr style={{ borderColor: "#333", margin: "16px 0" }} />
+              <hr className="profileDivider" />
 
-              <div style={{ display: "grid", gap: 12 }}>
+              <div className="profileDetails">
                 <p>
                   <b>About:</b> {profile?.bio || "—"}
                 </p>

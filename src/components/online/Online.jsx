@@ -1,11 +1,9 @@
-import "./online.css";
-
-export default function online({ user }) {
+export default function Online({ user, online }) {
   return (
     <li className="rightbarFriend">
       <div className="rightbarProfileImgContainer">
         <img className="rightbarFriendImg" src={user.profilePicture} alt="" />
-        <span className="rightbarOnline"></span>
+        {online && <span className="rightbarOnline"></span>}
       </div>
       <span className="rightbarUsername">{user.username}</span>
     </li>

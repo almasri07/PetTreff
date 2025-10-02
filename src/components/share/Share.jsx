@@ -27,11 +27,9 @@ export default function Share({ addPost }) {
     (async () => {
       try {
         const { data } = await ProfileApi.getMe();
-        setProfilePicUrl(
-          data.urlProfilePicture || "/assets/default-avatar.png"
-        );
+        setProfilePicUrl(data.urlProfilePicture || "/assets/001.jpg");
       } catch {
-        setProfilePicUrl("/assets/default-avatar.png");
+        setProfilePicUrl("/assets/001.jpg");
       }
     })();
   }, []);

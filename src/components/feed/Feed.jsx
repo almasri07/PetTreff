@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import Share from "../share/Share";
 import "./feed.css";
 import Post from "../post/Post";
-import { PostsApi } from "../../api/api"; // <- uses shared axios
+import { PostsApi, AdminApi } from "../../api/api";
 
 export default function Feed() {
   const [posts, setPosts] = useState([]); // PostDTO[]

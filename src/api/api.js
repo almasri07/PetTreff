@@ -9,8 +9,8 @@ export const api = axios.create({
 
 // === Profile === 
 export const ProfileApi = {
-    getMe: () => api.get("api/profile"), updateMe: (dto) =>
-        api.put("api/profile", dto),
+    getMe: () => api.get("/api/profile"), updateMe: (dto) =>
+        api.put("/api/profile", dto),
     getByUserId: (id) => api.get(`/api/profile/${id}`),
 };
 
@@ -30,6 +30,7 @@ export const AuthApi = {
             headers: { "Content-Type": "text/plain;charset=UTF-8" },
         }),
     logout: () => api.post("/auth/logout"),
+    getRoles: () => api.get("/auth/roles"),
 };
 
 // === Users ===
@@ -51,6 +52,7 @@ export const UsersApi = {
         api.put(`/api/users/${id}/email`, newEmail, {
             headers: { "Content-Type": "text/plain;charset=UTF-8" },
         }),
+    getEmail: (id) => api.get(`/api/users/${id}/email`),
     search: (query) => api.get("/api/users/search", { params: { query } }),
     pets: (id) => api.get(`/api/users/${id}/pets`),
     posts: (id) => api.get(`/api/users/${id}/posts`),
@@ -103,6 +105,7 @@ export const FriendshipsApi = {
     accept: (id) => api.post(`/api/friendships/${id}/accept`),
     decline: (id) => api.post(`/api/friendships/${id}/decline`),
     delete: (id) => api.delete(`/api/friendships/${id}`),
+    getStatus: (otherUserId) => api.get(`/api/friendships/status/${otherUserId}`),
 };
 
 // === Match ===
@@ -117,6 +120,8 @@ export const MatchApi = {
     close: (id) => api.post(`/api/match/${id}/close`),
     deleteRequest: (id) => api.delete(`/api/match/${id}`),
     deleteInterest: (id) => api.delete(`/api/match/${id}/unsent-interest`),
+    acceptedPeer: (matchId) => api.get(`/api/match/${matchId}/accepted-peer`),
+    currentMatchId: () => api.get("/api/match/currentMatchId"),
 };
 
 // === Notifications ===
@@ -125,6 +130,7 @@ export const NotificationsApi = {
     count: () => api.get("/api/notifications/count"),
     readOne: (id) => api.post(`/api/notifications/${id}/read`),
     readAll: () => api.post("/api/notifications/read-all"),
+    getOne: (id) => api.get(`/api/oneNotfication/${id}`),
 };
 
 // === Presence ===
@@ -135,7 +141,7 @@ export const PresenceApi = {
 // === Chat (REST + STOMP) ===
 export const ChatApi = {
     history: (senderId, recipientId) =>
-        api.get(`/messages/${senderId}/${recipientId}`),
+        api.get(`/api/chat/${senderId}/${recipientId}`),
 };
 
 export function connectChat({ onMessage } = {}) {
@@ -162,3 +168,26 @@ export function connectChat({ onMessage } = {}) {
 
     return { client, send };
 }
+
+
+// === Admin ===
+export const AdminApi = {
+    // GET /api/admin/dashboard
+    dashboard: () => api.get("/api/admin/dashboard"),
+
+    // GET /api/admin/users
+    users: (limit = 10) =>
+        api.get("/api/admin/users", { params: { limit } }),
+    // DELETE /api/admin/{id}/deleteUser
+    deleteUser: (id) => api.delete(`/api/admin/${id}/deleteUser`),
+
+    // DELETE /api/admin/{id}/deleteMatchRequest
+    deleteMatchRequest: (id) => api.delete(`/api/admin/${id}/deleteMatchRequest`),
+
+    // DELETE /api/admin/{id}/deletePost
+    deletePost: (id) => api.delete(`/api/admin/${id}/deletePost`),
+
+    // DELETE /api/admin/{postId}/{commentId}/deleteComment
+    deleteComment: (postId, commentId) =>
+        api.delete(`/api/admin/${postId}/${commentId}/deleteComment`),
+};

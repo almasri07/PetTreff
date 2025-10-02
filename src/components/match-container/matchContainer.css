@@ -169,3 +169,36 @@
   background-color: #f1a438;
   color: #fff;
 }
+.match-status { padding: 4px 10px; border-radius: 12px; font-weight: 600; margin-right: 8px; }
+.badge-accepted { background: #e6f7ea; color: #168a3b; }
+.badge-declined { background: #fdeaea; color: #c0392b; }
+.badge-pending  { background: #eef3ff; color: #2b5fd3; }
+
+.chatBtn {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #cfd7ff;
+  background: #f6f8ff;
+  font-weight: 600;
+  cursor: pointer;
+  margin: 0 30px;
+}
+.chatBtn:hover {
+  background: #2c3e40;
+  color: #fff;
+}
+.chatBtn:disabled { opacity: 0.6; cursor: default; }
+.deleteBtn { 
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #ff4d4f;
+  background: #fff1f0;
+  color: #c0392b;
+  font-weight: 600;
+  cursor: pointer;
+  margin: 0 30px;
+}
+.deleteBtn:hover {
+  background: #ff4d4f;
+  color: #fff;
+}

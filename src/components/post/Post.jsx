@@ -2,16 +2,18 @@
 import React, { useEffect, useState, useMemo } from "react";
 import "./post.css";
 import { FavoriteBorder, Comment } from "@mui/icons-material";
-import { PostsApi } from "../../api/api";
+import { PostsApi, AuthApi, AdminApi } from "../../api/api";
 import { useAuth } from "../../AuthContext";
 
 function Post({ post, onDelete, onEdit }) {
   const { user: currentUser } = useAuth();
 
-  const [likeCount, setLikeCount] = useState(post.likeCount ?? 0);
-  const [isLiked, setIsLiked] = useState(false); // set from backend if you add likedByMe
+  const [posts, setPosts] = useState([]);
+  const [roles, setRoles] = useState([]);
 
-  // ----- keep editForm in sync with the incoming post -----
+  const [likeCount, setLikeCount] = useState(post.likeCount ?? 0);
+  const [isLiked, setIsLiked] = useState(false);
+
   const [isEditingPost, setIsEditingPost] = useState(false);
   const [editForm, setEditForm] = useState({
     content: post.content || "",
@@ -29,7 +31,7 @@ function Post({ post, onDelete, onEdit }) {
       Caption: post.Caption || "",
     });
     setLikeCount(post.likeCount ?? 0);
-  }, [post]); // ✅ sync when parent gives a new/updated post
+  }, [post]);
 
   // ----- comments -----
   const [comments, setComments] = useState([]); // CommentDTO[]
@@ -37,6 +39,19 @@ function Post({ post, onDelete, onEdit }) {
   const [showComments, setShowComments] = useState(false);
   const [editingCommentIndex, setEditingCommentIndex] = useState(null);
   const [editingCommentText, setEditingCommentText] = useState("");
+
+  // fetch roles einmal
+  useEffect(() => {
+    const loadRoles = async () => {
+      try {
+        const { data: roleData } = await AuthApi.getRoles();
+        setRoles(roleData ?? []);
+      } catch (e) {
+        console.error("Failed to load roles", e);
+      }
+    };
+    loadRoles();
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -121,6 +136,16 @@ function Post({ post, onDelete, onEdit }) {
     }
   };
 
+  const handleDeleteAdmin = async (id) => {
+    try {
+      await AdminApi.deletePost(id);
+
+      setPosts((prev) => prev.filter((p) => p.id !== postId));
+    } catch (e) {
+      console.error("Delete post failed:", e);
+    }
+  };
+
   const submitEditPost = async (e) => {
     e.preventDefault();
     try {
@@ -138,6 +163,9 @@ function Post({ post, onDelete, onEdit }) {
       console.error("update post failed", e2);
     }
   };
+
+  const isOwner = currentUser?.id === post.authorId;
+  const isAdmin = roles.includes("ROLE_ADMIN");
 
   const authorName = post.authorUsername ?? "User";
   const authorAvatar = "/assets/person/noAvatar.png";
@@ -222,7 +250,7 @@ function Post({ post, onDelete, onEdit }) {
             {post.Location && (
               <span className="postLocation">in {post.Location}</span>
             )}
-            {currentUser?.id === post.authorId && (
+            {isOwner && (
               <div className="postOptionsMenu">
                 <button
                   className="postOptionBtn"
@@ -233,6 +261,16 @@ function Post({ post, onDelete, onEdit }) {
                 <button
                   className="postOptionBtn"
                   onClick={() => onDelete?.(post.id)}
+                >
+                  Delete
+                </button>
+              </div>
+            )}
+            {isAdmin && (
+              <div className="postOptionsMenu">
+                <button
+                  className="postOptionBtn"
+                  onClick={() => handleDeleteAdmin(post.id)}
                 >
                   Delete
                 </button>

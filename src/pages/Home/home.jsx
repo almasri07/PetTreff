@@ -19,8 +19,8 @@ export default function Home() {
   }, []);
   return (
     <>
-      <Topbar onHamburgerClic={() => setShowSidebarMenu((p) => !p)} />
-      {alert(showSidebarMenu)}
+      <Topbar onHamburgerClick={() => setShowSidebarMenu((p) => !p)} />
+
       <div className="homeContainer">
         <div className="sidebar">
           <Sidebar />
